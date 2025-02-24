@@ -1,14 +1,45 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "relationJoins"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgcrypto]
+}
+
+model User {
+  id                  Int       @id @default(autoincrement())
+  privateUsername     String    @unique
+  publicUsername      String    @unique
+  password            String
+  publicKey           String
+  privateKeyEncrypted Int[]
+  salt                Int[]
+  iv                  Int[]
+  tokens              Token[]
+  sentMessages        Message[] @relation("SentMessages")
+  receivedMessages    Message[] @relation("ReceivedMessages")
+
+  @@map("users")
+}
+
+model Message {
+  id         Int   @id @default(autoincrement())
+  sender     Int
+  receiver   Int
+  content    Int[]
+  sentBy     User  @relation("SentMessages", fields: [sender], references: [id], onDelete: Cascade)
+  receivedBy User  @relation("ReceivedMessages", fields: [receiver], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Token {
+  id      String @id
+  user_id Int
+  User    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("tokens")
 }
