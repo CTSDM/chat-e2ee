@@ -26,4 +26,9 @@ async function createUser(userData) {
     return user;
 }
 
-export default { getUser, createUser };
+async function createToken(tokenString, userId) {
+    const token = await prisma.token.create({ data: { id: tokenString, user_id: userId } });
+    return token;
+}
+
+export default { getUser, createUser, createToken };

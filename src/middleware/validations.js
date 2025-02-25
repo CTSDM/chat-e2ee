@@ -145,7 +145,7 @@ const signup = [
 ];
 
 const login = [
-    checkNotEmpty(body("username"), "username"),
+    checkNotEmpty(body("privateUsername"), "private username"),
     checkNotEmpty(body("password"), "password"),
 ];
 

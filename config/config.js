@@ -4,8 +4,10 @@ dotenv.config();
 const env = {
     port: process.env.PORT,
     clientUrl: process.env.CLIENT_URL,
-    keyAccessToken: process.env.ACCESS_TOKEN,
+    secretAccessToken: process.env.ACCESS_TOKEN,
+    secretRefreshToken: process.env.REFRESH_TOKEN,
     allowedOrigins: process.env.ALLOWED_ORIGINS,
+    devStatus: process.env.DEV_STATUS === "1" ? true : false,
     validation: {
         users: {
             username: {
@@ -25,6 +27,14 @@ const env = {
             salt: 16,
             iv: 12,
         },
+    },
+};
+
+env.cookie = {
+    options: {
+        httpOnly: true,
+        secure: env.devStatus ? false : true,
+        sameSite: "none",
     },
 };
 

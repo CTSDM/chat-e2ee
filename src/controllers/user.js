@@ -2,6 +2,8 @@ import bcrypt from "bcryptjs";
 import db from "../db/queries.js";
 import validation from "../middleware/validations.js";
 import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
+import httpUtils from "../middleware/httpUtils.js";
+import jwt from "../../config/jwt.js";
 
 const add = [
     validation.signup,
@@ -28,4 +30,11 @@ const add = [
     },
 ];
 
-export default { add };
+const login = [
+    validation.login,
+    validation.checkErrors,
+    httpUtils.reqAttachUserInformation,
+    jwt.createTokens,
+];
+
+export default { add, login };
