@@ -27,13 +27,19 @@ function checkWhiteSpaces(id, type) {
         .withMessage(`The ${type} cannot contain white spaces.`);
 }
 
-function checkRegex(id, regex, message, type) {
-    return id
-        .custom((value) => {
-            const reg = new RegExp(String.raw`${regex}`);
-            return reg.test(value);
-        })
-        .withMessage("The " + type + " " + message);
+function checkRegex(id, type, regex, message) {
+    return id.custom((value) => {
+        if (regexValidation(value, regex) === false) {
+            throw new Error("The " + type + " " + message);
+        } else {
+            return true;
+        }
+    });
+}
+
+function regexValidation(value, regex) {
+    const reg = new RegExp(String.raw`${regex}`);
+    return reg.test(value);
 }
 
 function checkAlphaNumerical(id, type) {
@@ -73,6 +79,7 @@ function checkPassword(id) {
         ),
         checkRegex(
             body(id),
+            "password",
             env.validation.users.password.regex,
             env.validation.users.password.message,
         ),
@@ -81,7 +88,7 @@ function checkPassword(id) {
 
 function checkUint8Arr(id, type) {
     return body(id).custom((_, { req }) => {
-        const arrUint8 = dataManipulation.objToUint8(req.body[id]);
+        const arrUint8 = dataManipulation.stringToUint8(req.body[id]);
         if (arrUint8 === false) {
             throw new Error(`Not a valid object for ${type}`);
         } else {
@@ -105,9 +112,9 @@ function checkUsername(id, type) {
         checkWhiteSpaces(body(id), type),
         checkRegex(
             body(id),
+            type,
             env.validation.users.username.regex,
             env.validation.users.username.message,
-            type,
         ),
         checkUsernameAvailability(id, type),
     ];
@@ -144,3 +151,4 @@ const login = [
 
 const validation = { signup, login, checkErrors };
 export default validation;
+export { regexValidation };

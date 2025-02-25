@@ -1,10 +1,20 @@
-function objToUint8(obj) {
-    const arr = Object.values(obj);
+function stringToUint8(stringArr) {
     try {
+        const arr = JSON.parse(stringArr);
         return new Uint8Array(arr);
     } catch {
         return false;
     }
 }
 
-export default { objToUint8 };
+function stringToBuffer(stringArr) {
+    try {
+        const arr = JSON.parse(stringArr);
+        const buffer = Buffer.from(arr);
+        return buffer;
+    } catch {
+        return false;
+    }
+}
+
+export default { stringToUint8, stringToBuffer };

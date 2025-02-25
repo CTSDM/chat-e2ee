@@ -15,9 +15,9 @@ model User {
   publicUsername      String    @unique
   password            String
   publicKey           String
-  privateKeyEncrypted Int[]
-  salt                Int[]
-  iv                  Int[]
+  privateKeyEncrypted Bytes
+  salt                Bytes
+  iv                  Bytes
   tokens              Token[]
   sentMessages        Message[] @relation("SentMessages")
   receivedMessages    Message[] @relation("ReceivedMessages")

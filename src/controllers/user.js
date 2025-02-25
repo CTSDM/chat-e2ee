@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import db from "../db/queries.js";
 import validation from "../middleware/validations.js";
+import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
 
 const add = [
     validation.signup,
@@ -10,9 +11,9 @@ const add = [
             publicUsername: req.body.publicUsername,
             privateUsername: req.body.privateUsername,
             publicKey: req.body.publicKey,
-            privateKeyEncrypted: JSON.parse(req.body.privateKeyEncrypted),
-            salt: Object.values(req.body.salt),
-            iv: Object.values(req.body.iv),
+            privateKeyEncrypted: dataManipulation.stringToBuffer(req.body.privateKeyEncrypted),
+            salt: dataManipulation.stringToBuffer(req.body.salt),
+            iv: dataManipulation.stringToBuffer(req.body.iv),
         };
         userData.password = await bcrypt.hash(req.body.password, 10);
         try {
