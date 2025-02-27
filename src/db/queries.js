@@ -31,4 +31,31 @@ async function createToken(tokenString, userId) {
     return token;
 }
 
-export default { getUser, createUser, createToken };
+async function getToken(tokenString) {
+    const token = await prisma.token.findUnique({
+        where: {
+            id: tokenString,
+        },
+    });
+    return token;
+}
+
+async function getPublicKey(publicUsername) {
+    const publicKey = await prisma.user.findUnique({
+        where: {
+            publicUsername: publicUsername,
+        },
+        select: {
+            publicKey: true,
+        },
+    });
+
+    return publicKey;
+}
+
+async function deleteToken(tokenString) {
+    const token = await prisma.token.delete({ where: { id: tokenString } });
+    return token;
+}
+
+export default { getUser, getPublicKey, getToken, createUser, createToken };

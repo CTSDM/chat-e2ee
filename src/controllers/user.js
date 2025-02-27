@@ -33,8 +33,56 @@ const add = [
 const login = [
     validation.login,
     validation.checkErrors,
-    httpUtils.reqAttachUserInformation,
+    httpUtils.checkUserExistsAttachInformation,
     jwt.createTokens,
 ];
 
-export default { add, login };
+async function getLogin(req, res, next) {
+    // we make sure the user exists
+    // we take the data from the JWT, the JWT stores both the public and private usernames
+    const privateUsername = req.user.privateUsername;
+    try {
+        const user = await db.getUser("privateUsername", privateUsername);
+        if (user) {
+            user.password = "_";
+            user.publicKey = "_";
+            req.user = user;
+            next();
+        } else {
+            res.sendStatus(404).end();
+            return;
+        }
+    } catch (err) {
+        console.log(err);
+        res.sendStatus(500).end();
+        return;
+    }
+}
+
+const addUserContact = [
+    // i should do some validation of the username...
+    // We make sure the user requesting the connection is not the same as the target user
+    async (req, res, next) => {
+        const targetPublicUsername = req.body.publicUsername;
+        if (req.user.publicUsername === targetPublicUsername) {
+            return res
+                .status(400)
+                .json({ errMsg: ["Cannot request connection to yourself"] })
+                .end();
+        }
+        try {
+            const publicKey = await db.getPublicKey(targetPublicUsername);
+            if (publicKey) {
+                req.user.publicKey = publicKey;
+                next();
+            } else {
+                res.sendStatus(404).end();
+            }
+        } catch (err) {
+            console.log(err);
+            res.sendStatus(500).end();
+        }
+    },
+];
+
+export default { add, login, getLogin, addUserContact };

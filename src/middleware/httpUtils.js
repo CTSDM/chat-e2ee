@@ -1,7 +1,7 @@
 import db from "../db/queries.js";
 import bcrypt from "bcryptjs";
 
-async function reqAttachUserInformation(req, res, next) {
+async function checkUserExistsAttachInformation(req, res, next) {
     const userCredentials = {
         privateUsername: req.body.privateUsername,
         password: req.body.password,
@@ -25,7 +25,10 @@ async function resSendClientJSON(req, res) {
         salt: req.user.salt,
         iv: req.user.iv,
     };
-    return res.status(200).json({ ...req.userDataToClient });
+    return res
+        .status(200)
+        .json({ ...req.userDataToClient })
+        .end();
 }
 
 async function checkUsernamePassword(userCredentials, res) {
@@ -43,9 +46,9 @@ async function checkUsernamePassword(userCredentials, res) {
         return user;
     } catch (err) {
         console.log(err);
-        res.sendStatus(500);
+        res.sendStatus(500).end();
         return false;
     }
 }
 
-export default { reqAttachUserInformation, resSendClientJSON };
+export default { checkUserExistsAttachInformation, resSendClientJSON };

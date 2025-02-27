@@ -28,14 +28,20 @@ const env = {
             iv: 12,
         },
     },
+    dbMessages: {
+        delete: {
+            notFound: "Record to delete does not exist.",
+        },
+    },
 };
 
 env.cookie = {
     options: {
         httpOnly: true,
-        secure: env.devStatus ? false : true,
+        secure: true,
         sameSite: "none",
     },
+    maxAge: 1000 * 60 * 60 * 24,
 };
 
 const corsConfig = {

@@ -149,6 +149,6 @@ const login = [
     checkNotEmpty(body("password"), "password"),
 ];
 
-const validation = { signup, login, checkErrors };
+const validation = { signup, login, checkErrors, checkUsername };
 export default validation;
 export { regexValidation };
