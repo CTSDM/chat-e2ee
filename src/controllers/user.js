@@ -4,6 +4,7 @@ import validation from "../middleware/validations.js";
 import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
 import httpUtils from "../middleware/httpUtils.js";
 import jwt from "../../config/jwt.js";
+import { env } from "../../config/config.js";
 
 const add = [
     validation.signup,
@@ -85,4 +86,14 @@ const addUserContact = [
     },
 ];
 
-export default { add, login, getLogin, addUserContact };
+function logout(req, res) {
+    if (req.cookies["access-token"]) {
+        res.clearCookie("access-token", env.cookie.options);
+    }
+    if (req.cookies["refresh-token"]) {
+        res.clearCookie("refresh-token", env.cookie.options);
+    }
+    res.sendStatus(205).end();
+}
+
+export default { add, login, logout, getLogin, addUserContact };

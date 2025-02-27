@@ -6,6 +6,7 @@ import { env, corsConfig } from "../config/config.js";
 import signupRoute from "./routes/signup.js";
 import loginRoute from "./routes/login.js";
 import userRoute from "./routes/user.js";
+import logoutRoute from "./routes/logout.js";
 
 const app = express();
 
@@ -20,5 +21,6 @@ app.use(express.json());
 app.use("/login", loginRoute);
 app.use("/signup", signupRoute);
 app.use("/users", userRoute);
+app.use("/logout", logoutRoute);
 
 app.listen(env.port, () => console.log(`Listening on port ${env.port}`));
