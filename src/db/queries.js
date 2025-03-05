@@ -58,4 +58,46 @@ async function deleteToken(tokenString) {
     return token;
 }
 
-export default { getUser, getPublicKey, getToken, createUser, createToken };
+async function createMessage(messageObject) {
+    const message = await prisma.message.create({
+        data: {
+            receiverPublicUsername: messageObject.receiver,
+            senderPublicUsername: messageObject.sender,
+            content: messageObject.content,
+            date: messageObject.date,
+        },
+    });
+    return message;
+}
+
+async function getMessages(publicUsername) {
+    const messages = await prisma.message.findMany({
+        where: {
+            receiverPublicUsername: publicUsername,
+        },
+    });
+    if (messages.length === 0) {
+        return null;
+    }
+    return messages;
+}
+
+async function deleteMessages(publicUsername) {
+    await prisma.message.deleteMany({
+        where: {
+            receiverPublicUsername: publicUsername,
+        },
+    });
+}
+
+export default {
+    getUser,
+    getPublicKey,
+    getToken,
+    createUser,
+    createToken,
+    deleteToken,
+    createMessage,
+    deleteMessages,
+    getMessages,
+};

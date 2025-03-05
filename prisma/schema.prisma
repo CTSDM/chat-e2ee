@@ -18,20 +18,29 @@ model User {
   privateKeyEncrypted Bytes
   salt                Bytes
   iv                  Bytes
+  backups             Backup[]
   tokens              Token[]
-  sentMessages        Message[] @relation("SentMessages")
   receivedMessages    Message[] @relation("ReceivedMessages")
 
   @@map("users")
 }
 
+model Backup {
+  id             Int    @id @default(autoincrement())
+  // the content will be stored as encrypted data, the raw string is a JSON with stringify
+  content        Bytes
+  publicUsername String @unique
+  User           User   @relation(fields: [publicUsername], references: [publicUsername], onDelete: Cascade)
+
+  @@map("backups")
+}
+
 model Message {
-  id         Int   @id @default(autoincrement())
-  sender     Int
-  receiver   Int
-  content    Int[]
-  sentBy     User  @relation("SentMessages", fields: [sender], references: [id], onDelete: Cascade)
-  receivedBy User  @relation("ReceivedMessages", fields: [receiver], references: [id], onDelete: Cascade)
+  id                     Int    @id @default(autoincrement())
+  content                Bytes
+  senderPublicUsername   String
+  receiverPublicUsername String
+  ReceivedBy             User   @relation("ReceivedMessages", fields: [senderPublicUsername], references: [publicUsername], onDelete: Cascade)
 
   @@map("messages")
 }

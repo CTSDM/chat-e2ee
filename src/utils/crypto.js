@@ -32,9 +32,4 @@ async function isPublicKey(key) {
     return true;
 }
 
-const cryptoUtils = {
-    isPublicKey: isPublicKey,
-    importKey: importKey,
-};
-
-export default cryptoUtils;
+export default { isPublicKey, importKey };

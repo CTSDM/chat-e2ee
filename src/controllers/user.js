@@ -14,9 +14,9 @@ const add = [
             publicUsername: req.body.publicUsername,
             privateUsername: req.body.privateUsername,
             publicKey: req.body.publicKey,
-            privateKeyEncrypted: dataManipulation.stringToBuffer(req.body.privateKeyEncrypted),
-            salt: dataManipulation.stringToBuffer(req.body.salt),
-            iv: dataManipulation.stringToBuffer(req.body.iv),
+            privateKeyEncrypted: dataManipulation.stringArrToBuffer(req.body.privateKeyEncrypted),
+            salt: dataManipulation.stringArrToBuffer(req.body.salt),
+            iv: dataManipulation.stringArrToBuffer(req.body.iv),
         };
         userData.password = await bcrypt.hash(req.body.password, 10);
         try {
@@ -46,7 +46,6 @@ async function getLogin(req, res, next) {
         const user = await db.getUser("privateUsername", privateUsername);
         if (user) {
             user.password = "_";
-            user.publicKey = "_";
             req.user = user;
             next();
         } else {

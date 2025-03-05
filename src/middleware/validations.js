@@ -88,7 +88,7 @@ function checkPassword(id) {
 
 function checkUint8Arr(id, type) {
     return body(id).custom((_, { req }) => {
-        const arrUint8 = dataManipulation.stringToUint8(req.body[id]);
+        const arrUint8 = dataManipulation.stringArrToUint8(req.body[id]);
         if (arrUint8 === false) {
             throw new Error(`Not a valid object for ${type}`);
         } else {

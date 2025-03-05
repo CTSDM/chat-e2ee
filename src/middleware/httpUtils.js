@@ -8,7 +8,7 @@ async function checkUserExistsAttachInformation(req, res, next) {
     };
     const user = await checkUsernamePassword(userCredentials, res);
     if (user) {
-        req.user = { ...user, password: "_", publicKey: "_" };
+        req.user = { ...user, password: "_" };
         next();
     } else {
         res.status(401)
@@ -21,6 +21,7 @@ async function resSendClientJSON(req, res) {
     req.userDataToClient = {
         privateUsername: req.user.privateUsername,
         publicUsername: req.user.publicUsername,
+        publicKey: req.user.publicKey,
         privateKeyEncrypted: req.user.privateKeyEncrypted,
         salt: req.user.salt,
         iv: req.user.iv,
