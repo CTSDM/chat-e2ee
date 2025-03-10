@@ -4,7 +4,7 @@ import jwt from "../../config/jwt.js";
 
 const router = Router();
 
-router.post("/keys", jwt.auth, controller.addUserContact, (req, res) => {
+router.get("/:username/keys", jwt.auth, controller.addUserContact, (req, res) => {
     return res.json(req.user.publicKey).end();
 });
 

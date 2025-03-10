@@ -1,0 +1,11 @@
+meta {
+  name: get_public_key
+  type: http
+  seq: 2
+}
+
+get {
+  url: http:localhost:3000/users/userchano/keys
+  body: json
+  auth: none
+}

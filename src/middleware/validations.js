@@ -61,8 +61,9 @@ function checkPublicKey(id) {
 }
 
 function checkValidityPublicKey(id) {
-    return id.custom(async (keyJSONString) => {
-        const key = await cryptoUtils.importKey(keyJSONString);
+    return id.custom(async (arrStr) => {
+        const keyJWK = dataManipulation.uInt8ArrayToStr(arrStr);
+        const key = await cryptoUtils.importKey(keyJWK);
         const result = await cryptoUtils.isPublicKey(key);
         if (result) return true;
         new Error("The imported public key is not a valid key.");

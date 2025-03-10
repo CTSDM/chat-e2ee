@@ -13,7 +13,7 @@ const add = [
         const userData = {
             publicUsername: req.body.publicUsername,
             privateUsername: req.body.privateUsername,
-            publicKey: req.body.publicKey,
+            publicKey: dataManipulation.stringArrToBuffer(req.body.publicKey),
             privateKeyEncrypted: dataManipulation.stringArrToBuffer(req.body.privateKeyEncrypted),
             salt: dataManipulation.stringArrToBuffer(req.body.salt),
             iv: dataManipulation.stringArrToBuffer(req.body.iv),
@@ -63,7 +63,7 @@ const addUserContact = [
     // i should do some validation of the username...
     // We make sure the user requesting the connection is not the same as the target user
     async (req, res, next) => {
-        const targetPublicUsername = req.body.publicUsername;
+        const targetPublicUsername = req.params.username;
         if (req.user.publicUsername === targetPublicUsername) {
             return res
                 .status(400)

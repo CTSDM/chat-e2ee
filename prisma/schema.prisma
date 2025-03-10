@@ -14,7 +14,7 @@ model User {
   privateUsername     String    @unique
   publicUsername      String    @unique
   password            String
-  publicKey           String
+  publicKey           Bytes
   privateKeyEncrypted Bytes
   salt                Bytes
   iv                  Bytes

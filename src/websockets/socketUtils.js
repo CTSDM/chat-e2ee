@@ -23,13 +23,12 @@ async function setup(sockets, socket, data) {
         // for now we loop through all the remaining messages
         const messagesDB = await db.getMessages(publicUsername);
         if (messagesDB) {
-            // code 300 means we have some updates
+            // code 200 means we have some updates
             messagesDB.forEach((messageDB) => {
                 const message = groupMessageInformation(
                     200,
-                    messageDB.sender,
+                    messageDB.senderPublicUsername,
                     messageDB.content,
-                    messageDB.date,
                 );
                 socket.send(message.buffer);
             });
@@ -44,7 +43,7 @@ async function setup(sockets, socket, data) {
 }
 
 async function send(sockets, socket, data) {
-    // a couple of assertions in here...
+    // check the user is online
     if (sockets[socket.target]) {
         const message = groupMessageInformation(200, socket.publicUsername, new Uint8Array(data));
         sockets[socket.target].send(message.buffer);
@@ -70,7 +69,7 @@ function groupMessageInformation(code, origin, dataArray) {
 }
 
 async function close(sockets, socket) {
-    console.log("closing connection");
+    console.log(`${new Date()} closing connection`);
     delete sockets[socket.publicUsername];
 }
 

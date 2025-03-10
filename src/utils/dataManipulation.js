@@ -69,6 +69,13 @@ function concatUint8Arr(arrUint8Arr) {
     return Uint8ArrConcat;
 }
 
+function uInt8ArrayToStr(arrStr) {
+    const arr = JSON.parse(arrStr);
+    const dec = new TextDecoder();
+    const keyJWK = dec.decode(new Uint8Array(arr));
+    return keyJWK;
+}
+
 export default {
     stringArrToUint8,
     stringArrToBuffer,
@@ -77,4 +84,5 @@ export default {
     stringToUint8Array,
     concatUint8Arr,
     intToUint8Array,
+    uInt8ArrayToStr,
 };
