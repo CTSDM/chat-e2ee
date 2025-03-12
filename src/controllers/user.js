@@ -71,9 +71,10 @@ const addUserContact = [
                 .end();
         }
         try {
-            const publicKey = await db.getPublicKey(targetPublicUsername);
-            if (publicKey) {
-                req.user.publicKey = publicKey;
+            const userData = await db.getPublicKeyAndSalt(targetPublicUsername);
+            if (userData) {
+                req.user.publicKey = userData.publicKey;
+                req.user.salt = userData.salt;
                 next();
             } else {
                 res.sendStatus(404).end();

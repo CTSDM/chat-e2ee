@@ -8,10 +8,11 @@ export default function startWebsockets(server) {
     ws.on("connection", (socket, req) => {
         webSocketHandlers.connection(socket, req);
         socket.on("message", async (data) => {
+            // the first byte of data is the flag to indicate what kind of message it is
             if (socketUtils.isMessage(data) === false) {
-                socketUtils.setup(sockets, socket, data);
+                socketUtils.setup(sockets, socket, data.slice(1));
             } else {
-                socketUtils.send(sockets, socket, data);
+                socketUtils.send(sockets, socket, data.slice(1));
             }
         });
         socket.on("close", async () => {

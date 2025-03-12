@@ -76,6 +76,12 @@ function uInt8ArrayToStr(arrStr) {
     return keyJWK;
 }
 
+function getNumFromBuffer(buff) {
+    // the buffer is considered to hold a single bit
+    const view = new DataView(buff);
+    return view.getUint8(0);
+}
+
 export default {
     stringArrToUint8,
     stringArrToBuffer,
@@ -85,4 +91,5 @@ export default {
     concatUint8Arr,
     intToUint8Array,
     uInt8ArrayToStr,
+    getNumFromBuffer,
 };

@@ -40,13 +40,14 @@ async function getToken(tokenString) {
     return token;
 }
 
-async function getPublicKey(publicUsername) {
+async function getPublicKeyAndSalt(publicUsername) {
     const publicKey = await prisma.user.findUnique({
         where: {
             publicUsername: publicUsername,
         },
         select: {
             publicKey: true,
+            salt: true,
         },
     });
 
@@ -92,7 +93,7 @@ async function deleteMessages(publicUsername) {
 
 export default {
     getUser,
-    getPublicKey,
+    getPublicKeyAndSalt,
     getToken,
     createUser,
     createToken,

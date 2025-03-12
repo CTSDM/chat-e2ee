@@ -8,11 +8,11 @@ async function importKey(keyJSON) {
             "jwk",
             publicKeyToBeImportedJWK,
             {
-                name: "RSA-OAEP",
-                hash: "SHA-256",
+                name: "ECDH",
+                namedCurve: "P-256",
             },
             true,
-            ["encrypt"],
+            [],
         );
     } catch (err) {
         console.log(err);
@@ -22,14 +22,17 @@ async function importKey(keyJSON) {
     }
 }
 
+function getRandomValues(length) {
+    return crypto.getRandomValues(new Uint8Array(length));
+}
+
 async function isPublicKey(key) {
     if (key.type !== "public") return false;
     if (key.usages.length !== 1) return false;
     if (key.usages[0] !== "encrypt") return false;
-    if (key.algorithm.hash.name !== "SHA-256") return false;
-    if (key.algorithm.name !== "RSA-OAEP") return false;
-    if (key.algorithm.modulusLength !== 4096) return false;
+    if (key.algorithm.namedCurve !== "P-256") return false;
+    if (key.algorithm.name !== "ECDH") return false;
     return true;
 }
 
-export default { isPublicKey, importKey };
+export default { isPublicKey, importKey, getRandomValues };

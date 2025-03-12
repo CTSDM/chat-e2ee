@@ -2,10 +2,11 @@ import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
 import db from "../db/queries.js";
 
 function isMessage(data) {
-    // depending on the size of the ArrBuffer sent by the client we know what type of information
-    // if it's greater than 512 bytes, we know it contains a message
-    // Everything that is not a message, it is JSON encoded
-    if (data.byteLength < 512) {
+    // the first byte of the message will show whether the data is for setup or a message
+    // 0 -> setup
+    // 1 -> message
+    const flagByte = dataManipulation.getNumFromBuffer(data.slice(0, 1));
+    if (flagByte === 0) {
         return false;
     } else {
         return true;
@@ -25,7 +26,9 @@ async function setup(sockets, socket, data) {
         if (messagesDB) {
             // code 200 means we have some updates
             messagesDB.forEach((messageDB) => {
+                flagByte = 1;
                 const message = groupMessageInformation(
+                    flagByte,
                     200,
                     messageDB.senderPublicUsername,
                     messageDB.content,
@@ -45,7 +48,13 @@ async function setup(sockets, socket, data) {
 async function send(sockets, socket, data) {
     // check the user is online
     if (sockets[socket.target]) {
-        const message = groupMessageInformation(200, socket.publicUsername, new Uint8Array(data));
+        const flagByte = 1; // it is a regular message what we are sending
+        const message = groupMessageInformation(
+            flagByte,
+            200,
+            socket.publicUsername,
+            new Uint8Array(data),
+        );
         sockets[socket.target].send(message.buffer);
     } else {
         // user is offline
@@ -58,13 +67,19 @@ async function send(sockets, socket, data) {
     }
 }
 
-function groupMessageInformation(code, origin, dataArray) {
+function groupMessageInformation(flagByte, code, origin, dataArray) {
     // code is integer
     // origin is string
     // dataArray is Uint8Array
+    const flagByteArray = dataManipulation.intToUint8Array(flagByte);
     const codeArray = dataManipulation.intToUint8Array(code);
     const originArray = dataManipulation.stringToUint8Array(origin);
-    const message = dataManipulation.concatUint8Arr([codeArray, originArray, dataArray]);
+    const message = dataManipulation.concatUint8Arr([
+        flagByteArray,
+        codeArray,
+        originArray,
+        dataArray,
+    ]);
     return message;
 }
 
