@@ -66,6 +66,7 @@ async function createMessage(messageObject) {
             senderPublicUsername: messageObject.sender,
             content: messageObject.content,
             date: messageObject.date,
+            flagByte: messageObject.flagByte,
         },
     });
     return message;

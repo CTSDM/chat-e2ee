@@ -1,16 +1,12 @@
 import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
 import db from "../db/queries.js";
 
-function isMessage(data) {
+function getMessageType(data) {
     // the first byte of the message will show whether the data is for setup or a message
     // 0 -> setup
     // 1 -> message
     const flagByte = dataManipulation.getNumFromBuffer(data.slice(0, 1));
-    if (flagByte === 0) {
-        return false;
-    } else {
-        return true;
-    }
+    return flagByte;
 }
 
 async function setup(sockets, socket, data) {
@@ -26,9 +22,8 @@ async function setup(sockets, socket, data) {
         if (messagesDB) {
             // code 200 means we have some updates
             messagesDB.forEach((messageDB) => {
-                flagByte = 1;
                 const message = groupMessageInformation(
-                    flagByte,
+                    messageDB.flagByte,
                     200,
                     messageDB.senderPublicUsername,
                     messageDB.content,
@@ -45,10 +40,9 @@ async function setup(sockets, socket, data) {
     }
 }
 
-async function send(sockets, socket, data) {
+async function send(sockets, socket, data, flagByte) {
     // check the user is online
     if (sockets[socket.target]) {
-        const flagByte = 1; // it is a regular message what we are sending
         const message = groupMessageInformation(
             flagByte,
             200,
@@ -60,6 +54,7 @@ async function send(sockets, socket, data) {
         // user is offline
         // we store the message in the db
         await db.createMessage({
+            flagByte: flagByte,
             receiver: socket.target,
             sender: socket.publicUsername,
             content: new Uint8Array(data),
@@ -71,8 +66,8 @@ function groupMessageInformation(flagByte, code, origin, dataArray) {
     // code is integer
     // origin is string
     // dataArray is Uint8Array
-    const flagByteArray = dataManipulation.intToUint8Array(flagByte);
-    const codeArray = dataManipulation.intToUint8Array(code);
+    const flagByteArray = dataManipulation.intToUint8Array(flagByte, 1);
+    const codeArray = dataManipulation.intToUint8Array(code, 2);
     const originArray = dataManipulation.stringToUint8Array(origin);
     const message = dataManipulation.concatUint8Arr([
         flagByteArray,
@@ -88,4 +83,4 @@ async function close(sockets, socket) {
     delete sockets[socket.publicUsername];
 }
 
-export default { isMessage, setup, close, send };
+export default { getMessageType, setup, close, send };

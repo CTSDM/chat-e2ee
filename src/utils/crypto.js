@@ -15,7 +15,6 @@ async function importKey(keyJSON) {
             [],
         );
     } catch (err) {
-        console.log(err);
         return false;
     } finally {
         return key;

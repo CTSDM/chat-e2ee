@@ -37,7 +37,7 @@ describe("The function concatUint8Arr", () => {
 
     it("should work correctly for real inputs", () => {
         const arrSimple = [1, 2, 3];
-        const arrInt = dataManipulation.intToUint8Array(404);
+        const arrInt = dataManipulation.intToUint8Array(404, 2);
         const arrUint8Arr = [arrInt, new Uint8Array(arrSimple)];
         const arrConcat = dataManipulation.concatUint8Arr(arrUint8Arr);
         arrConcat;

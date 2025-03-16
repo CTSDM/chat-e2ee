@@ -35,8 +35,8 @@ function intToBuffer(int) {
     return new Uint16Array([int]).buffer;
 }
 
-function intToUint8Array(int) {
-    const arr = new Uint8Array(2);
+function intToUint8Array(int, bytes) {
+    const arr = new Uint8Array(bytes);
     arr[0] = int & 0xff;
     arr[1] = (int >> 8) & 0xff;
     return arr;

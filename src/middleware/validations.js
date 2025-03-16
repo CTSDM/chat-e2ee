@@ -66,7 +66,7 @@ function checkValidityPublicKey(id) {
         const key = await cryptoUtils.importKey(keyJWK);
         const result = await cryptoUtils.isPublicKey(key);
         if (result) return true;
-        new Error("The imported public key is not a valid key.");
+        throw new Error("Something went wrong while importing or validating your public key.");
     });
 }
 
