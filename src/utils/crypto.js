@@ -27,8 +27,7 @@ function getRandomValues(length) {
 
 async function isPublicKey(key) {
     if (key.type !== "public") return false;
-    if (key.usages.length !== 1) return false;
-    if (key.usages[0] !== "encrypt") return false;
+    if (key.usages.length !== 0) return false;
     if (key.algorithm.namedCurve !== "P-256") return false;
     if (key.algorithm.name !== "ECDH") return false;
     return true;

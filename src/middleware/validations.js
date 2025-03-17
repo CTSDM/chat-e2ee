@@ -2,7 +2,6 @@ import { body, validationResult } from "express-validator";
 import { env } from "../../config/config.js";
 import { cryptoUtils } from "../utils/utils.js";
 import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
-import db from "../db/queries.js";
 
 function checkErrors(req, res, next) {
     const errors = validationResult(req);
@@ -117,23 +116,7 @@ function checkUsername(id, type) {
             env.validation.users.username.regex,
             env.validation.users.username.message,
         ),
-        checkUsernameAvailability(id, type),
     ];
-}
-
-function checkUsernameAvailability(id, type) {
-    return body(id).custom(async (value) => {
-        try {
-            const userDB = await db.getUser(id, value);
-            if (userDB) {
-                throw new Error(`The ${type} is already taken`);
-            }
-        } catch (err) {
-            console.log(err);
-            throw new Error("Something went wrong in the database");
-        }
-        return true;
-    });
 }
 
 const signup = [

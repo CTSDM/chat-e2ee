@@ -10,6 +10,26 @@ const add = [
     validation.signup,
     validation.checkErrors,
     async function (req, res) {
+        try {
+            // check whether the private username or public username exists
+            const errMsg = [];
+            const varsToCheck = [
+                { var: "privateUsername", str: "private username" },
+                { var: "publicUsername", str: "public username" },
+            ];
+            for (let i = 0; i < varsToCheck.length; ++i) {
+                const userDB = await db.getUser(varsToCheck[i].var, req.body[varsToCheck[i].var]);
+                if (userDB) {
+                    errMsg.push(`The ${varsToCheck[i].str} is already taken.`);
+                }
+            }
+            if (errMsg.length) return res.status(400).json({ errMsg: errMsg });
+        } catch (err) {
+            return res
+                .status(500)
+                .json({ errMsg: ["Something went wrong while checking the database."] });
+        }
+        // create the user
         const userData = {
             publicUsername: req.body.publicUsername,
             privateUsername: req.body.privateUsername,
