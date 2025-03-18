@@ -16,6 +16,7 @@ async function createUser(userData) {
         data: {
             privateUsername: userData.privateUsername,
             publicUsername: userData.publicUsername,
+            publicUsernameOriginalCase: userData.publicUsernameOriginalCase,
             password: userData.password,
             privateKeyEncrypted: userData.privateKeyEncrypted,
             publicKey: userData.publicKey,
@@ -40,7 +41,7 @@ async function getToken(tokenString) {
     return token;
 }
 
-async function getPublicKeyAndSalt(publicUsername) {
+async function getPublicKey(publicUsername) {
     const publicKey = await prisma.user.findUnique({
         where: {
             publicUsername: publicUsername,
@@ -48,6 +49,8 @@ async function getPublicKeyAndSalt(publicUsername) {
         select: {
             publicKey: true,
             salt: true,
+            publicUsername: true,
+            publicUsernameOriginalCase: true,
         },
     });
 
@@ -94,7 +97,7 @@ async function deleteMessages(publicUsername) {
 
 export default {
     getUser,
-    getPublicKeyAndSalt,
+    getPublicKey,
     getToken,
     createUser,
     createToken,

@@ -5,7 +5,16 @@ import jwt from "../../config/jwt.js";
 const router = Router();
 
 router.get("/:username/keys", jwt.auth, controller.addUserContact, (req, res) => {
-    return res.json({ publicKey: req.user.publicKey, salt: req.user.salt }).end();
+    return res
+        .json({
+            publicKey: req.userRequested.publicKey,
+            salt: req.userRequested.salt,
+            // the original case is only on the front end to display information
+            // the logic is done with the lowercase one
+            publicUsername: req.userRequested.publicUsername,
+            publicUsernameOriginalCase: req.userRequested.publicUsernameOriginalCase,
+        })
+        .end();
 });
 
 export default router;

@@ -10,17 +10,18 @@ datasource db {
 }
 
 model User {
-  id                  Int       @id @default(autoincrement())
-  privateUsername     String    @unique
-  publicUsername      String    @unique
-  password            String
-  publicKey           Bytes
-  privateKeyEncrypted Bytes
-  salt                Bytes
-  iv                  Bytes
-  backups             Backup[]
-  tokens              Token[]
-  receivedMessages    Message[] @relation("ReceivedMessages")
+  id                         Int       @id @default(autoincrement())
+  privateUsername            String    @unique
+  publicUsername             String    @unique
+  publicUsernameOriginalCase String    @unique
+  password                   String
+  publicKey                  Bytes
+  privateKeyEncrypted        Bytes
+  salt                       Bytes
+  iv                         Bytes
+  backups                    Backup[]
+  tokens                     Token[]
+  receivedMessages           Message[] @relation("ReceivedMessages")
 
   @@map("users")
 }

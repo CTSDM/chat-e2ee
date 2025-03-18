@@ -18,7 +18,8 @@ const add = [
                 { var: "publicUsername", str: "public username" },
             ];
             for (let i = 0; i < varsToCheck.length; ++i) {
-                const userDB = await db.getUser(varsToCheck[i].var, req.body[varsToCheck[i].var]);
+                const value = req.body[varsToCheck[i].var].toLowerCase();
+                const userDB = await db.getUser(varsToCheck[i].var, value);
                 if (userDB) {
                     errMsg.push(`The ${varsToCheck[i].str} is already taken.`);
                 }
@@ -31,7 +32,8 @@ const add = [
         }
         // create the user
         const userData = {
-            publicUsername: req.body.publicUsername,
+            publicUsername: req.body.publicUsername.toLowerCase(),
+            publicUsernameOriginalCase: req.body.publicUsername,
             privateUsername: req.body.privateUsername,
             publicKey: dataManipulation.stringArrToBuffer(req.body.publicKey),
             privateKeyEncrypted: dataManipulation.stringArrToBuffer(req.body.privateKeyEncrypted),
@@ -61,9 +63,8 @@ const login = [
 async function getLogin(req, res, next) {
     // we make sure the user exists
     // we take the data from the JWT, the JWT stores both the public and private usernames
-    const privateUsername = req.user.privateUsername;
     try {
-        const user = await db.getUser("privateUsername", privateUsername);
+        const user = await db.getUser("privateUsername", req.user.privateUsername);
         if (user) {
             user.password = "_";
             req.user = user;
@@ -80,10 +81,12 @@ async function getLogin(req, res, next) {
 }
 
 const addUserContact = [
+    validation.addUserContact,
+    validation.checkErrors,
     // i should do some validation of the username...
     // We make sure the user requesting the connection is not the same as the target user
     async (req, res, next) => {
-        const targetPublicUsername = req.params.username;
+        const targetPublicUsername = req.params.username.toLowerCase();
         if (req.user.publicUsername === targetPublicUsername) {
             return res
                 .status(400)
@@ -91,10 +94,13 @@ const addUserContact = [
                 .end();
         }
         try {
-            const userData = await db.getPublicKeyAndSalt(targetPublicUsername);
+            const userData = await db.getPublicKey(targetPublicUsername);
+            req.userRequested = {};
             if (userData) {
-                req.user.publicKey = userData.publicKey;
-                req.user.salt = userData.salt;
+                req.userRequested.publicKey = userData.publicKey;
+                req.userRequested.salt = userData.salt;
+                req.userRequested.publicUsername = userData.publicUsername;
+                req.userRequested.publicUsernameOriginalCase = userData.publicUsernameOriginalCase;
                 next();
             } else {
                 res.sendStatus(404).end();

@@ -1,4 +1,4 @@
-import { body, validationResult } from "express-validator";
+import { body, param, validationResult } from "express-validator";
 import { env } from "../../config/config.js";
 import { cryptoUtils } from "../utils/utils.js";
 import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
@@ -100,18 +100,18 @@ function checkUint8Arr(id, type) {
     });
 }
 
-function checkUsername(id, type) {
+function checkUsername(id, type, fn) {
     return [
-        checkAlphaNumerical(body(id), type),
+        checkAlphaNumerical(fn(id), type),
         checkLength(
-            body(id),
+            fn(id),
             type,
             env.validation.users.username.minLength,
             env.validation.users.username.maxLength,
         ),
-        checkWhiteSpaces(body(id), type),
+        checkWhiteSpaces(fn(id), type),
         checkRegex(
-            body(id),
+            fn(id),
             type,
             env.validation.users.username.regex,
             env.validation.users.username.message,
@@ -119,9 +119,14 @@ function checkUsername(id, type) {
     ];
 }
 
+function sanitizeCase(id) {
+    return id.toLowerCase();
+}
+
 const signup = [
-    checkUsername("privateUsername", "private username"),
-    checkUsername("publicUsername", "public username"),
+    checkUsername("privateUsername", "private username", body),
+    sanitizeCase(body("privateUsername")),
+    checkUsername("publicUsername", "public username", body),
     checkPublicKey("publicKey"),
     checkPassword("password"),
     checkUint8Arr("salt", "salt"),
@@ -130,9 +135,16 @@ const signup = [
 
 const login = [
     checkNotEmpty(body("privateUsername"), "private username"),
+    sanitizeCase(body("privateUsername")),
     checkNotEmpty(body("password"), "password"),
 ];
 
-const validation = { signup, login, checkErrors, checkUsername };
+const addUserContact = [
+    checkNotEmpty(param("username"), "public username"),
+    sanitizeCase(param("username")),
+    checkUsername("username", "public username", param),
+];
+
+const validation = { addUserContact, signup, login, checkErrors, checkUsername };
 export default validation;
 export { regexValidation };

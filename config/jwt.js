@@ -31,6 +31,7 @@ function createAccessToken(req, res) {
 
 function signToken(req, secret, options) {
     const payload = {
+        publicUsernameOriginalCase: req.user.publicUsernameOriginalCase,
         publicUsername: req.user.publicUsername,
         privateUsername: req.user.privateUsername,
         id: req.user.id,
@@ -50,6 +51,7 @@ async function checkRefreshToken(req) {
     try {
         const payload = jwt.verify(token, env.secretRefreshToken);
         req.user = {
+            publicUsernameOriginalCase: payload.publicUsernameOriginalCase,
             publicUsername: payload.publicUsername,
             privateUsername: payload.privateUsername,
             id: payload.id,
@@ -87,12 +89,10 @@ const auth = (req, res, next) => {
                     return;
                 }
                 createAccessToken(req, res);
-                next();
-                return;
+                return next();
             } catch (err) {
                 console.log(err);
-                res.status(401).json({ data: "NOT AN APE" }).end();
-                return;
+                return res.status(401).json({ data: "NOT AN APE" }).end();
             }
         }
     })(req, res, next);
