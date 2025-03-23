@@ -5,11 +5,11 @@ import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
 function connection(socket, req) {
     socket.binaryType = "arraybuffer";
     if (req.headers.origin.includes("localhost:5173") === false) {
-        socket.send(dataManipulation.intToBuffer(401));
+        socket.send(dataManipulation.intToBuffer(100));
         socket.terminate();
         console.log("Connection not allowed, origin not in the whitelist.");
     } else {
-        socket.send(dataManipulation.intToBuffer(200));
+        socket.send(dataManipulation.intToBuffer(50));
     }
 }
 

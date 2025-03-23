@@ -1,5 +1,4 @@
 import { strict as assert } from "node:assert";
-import { env } from "../../config/config.js";
 
 // we expect an array coming from JSON.stringify
 function stringArrToUint8(stringArr) {
@@ -42,13 +41,21 @@ function intToUint8Array(int, bytes) {
     return arr;
 }
 
-function stringToUint8Array(str) {
+function stringToUint8Array(str, targetLength) {
+    // maxLength is an integer that represents the number of bytes
     const enc = new TextEncoder();
     const arr = enc.encode(str);
-    const maxLength = env.validation.users.username.maxLength;
-    assert.deepEqual(arr.length > maxLength, false);
+    assert.deepEqual(arr.length > targetLength, false);
     // we pad with array of 0 a new uint8array, in case it is needed
-    return new Uint8Array([...new Array(maxLength - arr.length), ...arr]);
+    return new Uint8Array([...new Array(targetLength - arr.length), ...arr]);
+}
+
+function arrBufferToString(arrBuffer) {
+    const arr = new Uint8Array(arrBuffer);
+    const strEncodedArr = arr.filter((value) => value !== 0);
+    const dec = new TextDecoder();
+    const str = dec.decode(strEncodedArr);
+    return str;
 }
 
 function concatUint8Arr(arrUint8Arr) {
@@ -92,4 +99,5 @@ export default {
     intToUint8Array,
     uInt8ArrayToStr,
     getNumFromBuffer,
+    arrBufferToString,
 };

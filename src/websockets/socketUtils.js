@@ -20,11 +20,9 @@ async function setup(sockets, socket, data) {
         // for now we loop through all the remaining messages
         const messagesDB = await db.getMessages(publicUsername);
         if (messagesDB) {
-            // code 200 means we have some updates
             messagesDB.forEach((messageDB) => {
                 const message = groupMessageInformation(
                     messageDB.flagByte,
-                    200,
                     messageDB.senderPublicUsername,
                     messageDB.content,
                 );
@@ -32,49 +30,39 @@ async function setup(sockets, socket, data) {
             });
         }
         await db.deleteMessages(publicUsername);
-    } else if (messageClient.type === "register") {
-        socket.target = messageClient.publicUsername;
     } else {
         console.log("invalid message");
         console.log(messageObj);
     }
 }
 
-async function send(sockets, socket, data, flagByte) {
+async function send(sockets, senderInfoStr, socket, target, data, flagByte, groupID = null) {
+    // the information to send depends if it is a direct message or a group message
+    // the sender information will take 48 bytes
     // check the user is online
-    if (sockets[socket.target]) {
-        const message = groupMessageInformation(
-            flagByte,
-            200,
-            socket.publicUsername,
-            new Uint8Array(data),
-        );
-        sockets[socket.target].send(message.buffer);
+    // we need to check if receiver is online
+    if (sockets[target]) {
+        const message = groupMessageInformation(flagByte, senderInfoStr, new Uint8Array(data));
+        sockets[target].send(message.buffer);
     } else {
         // user is offline
         // we store the message in the db
         await db.createMessage({
             flagByte: flagByte,
-            receiver: socket.target,
+            groupID: groupID,
+            receiver: target,
             sender: socket.publicUsername,
             content: new Uint8Array(data),
         });
     }
 }
 
-function groupMessageInformation(flagByte, code, origin, dataArray) {
+function groupMessageInformation(flagByte, origin, dataArray) {
     // code is integer
-    // origin is string
+    // origin is uint8array
     // dataArray is Uint8Array
     const flagByteArray = dataManipulation.intToUint8Array(flagByte, 1);
-    const codeArray = dataManipulation.intToUint8Array(code, 2);
-    const originArray = dataManipulation.stringToUint8Array(origin);
-    const message = dataManipulation.concatUint8Arr([
-        flagByteArray,
-        codeArray,
-        originArray,
-        dataArray,
-    ]);
+    const message = dataManipulation.concatUint8Arr([flagByteArray, origin, dataArray]);
     return message;
 }
 
