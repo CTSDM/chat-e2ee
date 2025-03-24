@@ -1,4 +1,5 @@
 import { strict as assert } from "node:assert";
+import { env } from "../../config/config.js";
 
 // we expect an array coming from JSON.stringify
 function stringArrToUint8(stringArr) {

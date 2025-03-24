@@ -14,7 +14,8 @@ export default function startWebsockets(server) {
             const messageType = socketUtils.getMessageType(data);
             if (messageType === 0) {
                 socketUtils.setup(sockets, socket, data.slice(1));
-            } else if (messageType >= 1) {
+            }
+            if (messageType === 1 || messageType === 2) {
                 // sockets, senderInfoStr, socket, target, data, flagByte, groupID = null
                 const target = dataManipulation.arrBufferToString(data.slice(1, 49));
                 const senderInfoStr = dataManipulation.stringToUint8Array(
@@ -29,6 +30,16 @@ export default function startWebsockets(server) {
                     data.slice(49),
                     messageType,
                 );
+            }
+            if (messageType === 3) {
+                // with this message we add the different users to the sockets obj
+                socketUtils.addGroupParticipants(sockets, data);
+            }
+            if (messageType === 10) {
+                // we register the new group
+                // save its name
+                // create empty array to add all the participants
+                socketUtils.setupGroupMessage(sockets, data);
             }
         });
         socket.on("close", async () => {

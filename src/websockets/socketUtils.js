@@ -36,6 +36,23 @@ async function setup(sockets, socket, data) {
     }
 }
 
+function addGroupParticipants(sockets, data) {
+    const { groupID, name } = getInfoGroupSetup(data);
+    sockets[groupID].participants.push(name);
+}
+
+function setupGroupMessage(sockets, data) {
+    const { groupID, name } = getInfoGroupSetup(data);
+    sockets[groupID] = { name: name, id: groupID, participants: [] };
+}
+
+function getInfoGroupSetup(data) {
+    const targetLength = 48;
+    const groupID = dataManipulation.arrBufferToString(data.slice(1, 1 + targetLength));
+    const name = dataManipulation.arrBufferToString(data.slice(1 + targetLength));
+    return { groupID, name };
+}
+
 async function send(sockets, senderInfoStr, socket, target, data, flagByte, groupID = null) {
     // the information to send depends if it is a direct message or a group message
     // the sender information will take 48 bytes
@@ -71,4 +88,4 @@ async function close(sockets, socket) {
     delete sockets[socket.publicUsername];
 }
 
-export default { getMessageType, setup, close, send };
+export default { getMessageType, setup, setupGroupMessage, addGroupParticipants, close, send };
