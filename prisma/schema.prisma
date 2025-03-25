@@ -10,18 +10,20 @@ datasource db {
 }
 
 model User {
-  id                         Int       @id @default(autoincrement())
-  privateUsername            String    @unique
-  publicUsername             String    @unique
-  publicUsernameOriginalCase String    @unique
+  id                         Int                 @id @default(autoincrement())
+  privateUsername            String              @unique
+  publicUsername             String              @unique
+  publicUsernameOriginalCase String              @unique
   password                   String
   publicKey                  Bytes
   privateKeyEncrypted        Bytes
   salt                       Bytes
   iv                         Bytes
   backups                    Backup[]
+  groupKeySymm               GroupKeySymm[]
   tokens                     Token[]
-  receivedMessages           Message[] @relation("ReceivedMessages")
+  receivedMessages           Message[]           @relation("ReceivedMessages")
+  groupKeySymmSetup          GroupKeySymmSetup[]
 
   @@map("users")
 }
@@ -34,6 +36,28 @@ model Backup {
   User           User   @relation(fields: [publicUsername], references: [publicUsername], onDelete: Cascade)
 
   @@map("backups")
+}
+
+model GroupKeySymm {
+  id             Int    @id @default(autoincrement())
+  groupID        String
+  key            Bytes
+  iv             Bytes
+  publicUsername String
+  User           User   @relation(fields: [publicUsername], references: [publicUsername], onDelete: Cascade)
+
+  @@unique([groupID, publicUsername])
+  @@map("group_key_symm")
+}
+
+model GroupKeySymmSetup {
+  id             Int    @id @default(autoincrement())
+  groupID        String
+  key            Bytes
+  iv             Bytes
+  publicUsername String
+  encryptedBy    String
+  User           User   @relation(fields: [publicUsername], references: [publicUsername], onDelete: Cascade)
 }
 
 model Message {

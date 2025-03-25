@@ -35,6 +35,12 @@ export default function startWebsockets(server) {
                 // with this message we add the different users to the sockets obj
                 socketUtils.addGroupParticipants(sockets, data);
             }
+            if (messageType === 4) {
+                socketUtils.sendKey(sockets, socket, data);
+            }
+            if (messageType === 5) {
+                await socketUtils.saveGroupSymmKey(socket.publicUsername, data);
+            }
             if (messageType === 10) {
                 // we register the new group
                 // save its name

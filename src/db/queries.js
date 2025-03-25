@@ -95,6 +95,18 @@ async function deleteMessages(publicUsername) {
     });
 }
 
+async function createKeyGroup(username, groupID, iv, key) {
+    const entryDB = await prisma.groupKeySymm.create({
+        data: {
+            publicUsername: username,
+            groupID: groupID,
+            iv: iv,
+            key: key,
+        },
+    });
+    return entryDB;
+}
+
 export default {
     getUser,
     getPublicKey,
@@ -105,4 +117,5 @@ export default {
     createMessage,
     deleteMessages,
     getMessages,
+    createKeyGroup,
 };
