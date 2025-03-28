@@ -41,6 +41,12 @@ export default function startWebsockets(server) {
             if (messageType === 5) {
                 await socketUtils.saveGroupSymmKey(socket.publicUsername, data);
             }
+            if (messageType === 6) {
+                const groupID = dataManipulation.arrBufferToString(data.slice(1, 49));
+                const sender = socket.publicUsername;
+                const flagByte = 1;
+                socketUtils.sendGroupMessage(sockets, groupID, data.slice(49), flagByte, sender);
+            }
             if (messageType === 10) {
                 // we register the new group
                 // save its name

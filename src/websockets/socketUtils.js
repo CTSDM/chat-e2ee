@@ -78,7 +78,7 @@ function getInfoPairsFromBuffer(data, len) {
     return [str1, str2];
 }
 
-async function send(sockets, senderInfoStr, socket, target, data, flagByte, groupID = null) {
+async function send(sockets, senderInfoStr, socket, target, data, flagByte) {
     // the information to send depends if it is a direct message or a group message
     // the sender information will take 48 bytes
     // check the user is online
@@ -91,12 +91,23 @@ async function send(sockets, senderInfoStr, socket, target, data, flagByte, grou
         // we store the message in the db
         await db.createMessage({
             flagByte: flagByte,
-            groupID: groupID,
             receiver: target,
             sender: socket.publicUsername,
             content: new Uint8Array(data),
         });
     }
+}
+
+function sendGroupMessage(sockets, groupID, data, flagByte, sender) {
+    sockets[groupID].participants.forEach((username) => {
+        if (sender !== username) {
+            console.log(username);
+            console.log(sender);
+            const groupIDArr = dataManipulation.stringToUint8Array(groupID, 48);
+            const message = groupMessageInformation(flagByte, groupIDArr, new Uint8Array(data));
+            sockets[username].send(message);
+        }
+    });
 }
 
 function groupMessageInformation(flagByte, origin, dataArray) {
@@ -122,4 +133,5 @@ export default {
     close,
     send,
     sendKey,
+    sendGroupMessage,
 };
