@@ -10,71 +10,94 @@ datasource db {
 }
 
 model User {
-  id                         Int                 @id @default(autoincrement())
-  privateUsername            String              @unique
-  publicUsername             String              @unique
-  publicUsernameOriginalCase String              @unique
+  id                         Int             @id @default(autoincrement())
+  privateUsername            String          @unique
+  publicUsername             String          @unique
+  publicUsernameOriginalCase String          @unique
   password                   String
   publicKey                  Bytes
   privateKeyEncrypted        Bytes
   salt                       Bytes
   iv                         Bytes
-  backups                    Backup[]
-  groupKeySymm               GroupKeySymm[]
-  tokens                     Token[]
-  receivedMessages           Message[]           @relation("ReceivedMessages")
-  groupKeySymmSetup          GroupKeySymmSetup[]
+  SentMessages               DirectMessage[] @relation("SentMessages")
+  ReceivedMessages           DirectMessage[] @relation("ReceivedMessages")
+  Token                      Token[]
+  CreatedGroups              Group[]
+  GroupKeys                  GroupKey[]
 
   @@map("users")
 }
 
-model Backup {
-  id             Int    @id @default(autoincrement())
-  // the content will be stored as encrypted data, the raw string is a JSON with stringify
-  content        Bytes
-  publicUsername String @unique
-  User           User   @relation(fields: [publicUsername], references: [publicUsername], onDelete: Cascade)
+model DirectMessage {
+  id               String   @id
+  createdAt        DateTime @default(now())
+  sentByUserId     Int
+  receivedByUserId Int
+  iv               Bytes
+  contentEncrypted Bytes
+  readStatus       Boolean  @default(false)
+  SentByUser       User     @relation("SentMessages", fields: [sentByUserId], references: [id], onDelete: Cascade)
+  ReceivedByUser   User     @relation("ReceivedMessages", fields: [receivedByUserId], references: [id], onDelete: Cascade)
 
-  @@map("backups")
+  @@map("direct_messages")
 }
 
-model GroupKeySymm {
-  id             Int    @id @default(autoincrement())
-  groupID        String
-  key            Bytes
-  iv             Bytes
-  publicUsername String
-  User           User   @relation(fields: [publicUsername], references: [publicUsername], onDelete: Cascade)
+model Group {
+  id              String     @id
+  name            String
+  createdByUserId Int
+  createdAt       DateTime
+  iv              Bytes
+  User            User       @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  GroupKeys       GroupKey[]
 
-  @@unique([groupID, publicUsername])
-  @@map("group_key_symm")
+  @@map("group")
 }
 
-model GroupKeySymmSetup {
-  id             Int    @id @default(autoincrement())
-  groupID        String
-  key            Bytes
-  iv             Bytes
-  publicUsername String
-  encryptedBy    String
-  User           User   @relation(fields: [publicUsername], references: [publicUsername], onDelete: Cascade)
+model GroupKey {
+  id      Int    @id @default(autoincrement())
+  groupId String
+  userId  Int
+  key     Bytes
+  salt    Bytes
+  User    User   @relation(fields: [userId], references: [id])
+  Group   Group  @relation(fields: [groupId], references: [id])
+
+  @@map("group_keys")
 }
 
-model Message {
-  id                     Int    @id @default(autoincrement())
-  flagByte               Int
-  content                Bytes
-  senderPublicUsername   String
-  receiverPublicUsername String
-  ReceivedBy             User   @relation("ReceivedMessages", fields: [senderPublicUsername], references: [publicUsername], onDelete: Cascade)
+model GroupMember {
+  groupId  String
+  userId   Int
+  joinetAt DateTime @default(now())
 
-  @@map("messages")
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+model GroupMessage {
+  id       String   @id
+  groupID  String
+  senderID Int
+  content  String
+  sentAt   DateTime @default(now())
+
+  @@map("group_messages")
+}
+
+model GroupMessageReadStatus {
+  messageId String
+  userId    Int
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
+  @@map("group_message_read_status")
 }
 
 model Token {
-  id      String @id
-  user_id Int
-  User    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id     String @id
+  userId Int
+  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("tokens")
 }

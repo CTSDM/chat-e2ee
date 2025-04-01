@@ -28,7 +28,7 @@ async function createUser(userData) {
 }
 
 async function createToken(tokenString, userId) {
-    const token = await prisma.token.create({ data: { id: tokenString, user_id: userId } });
+    const token = await prisma.token.create({ data: { id: tokenString, userId: userId } });
     return token;
 }
 
@@ -62,20 +62,20 @@ async function deleteToken(tokenString) {
     return token;
 }
 
-async function createMessage(messageObject) {
-    const message = await prisma.message.create({
+async function createDirectMessage(id, sender, receiver, iv, content) {
+    const message = await prisma.directMessage.create({
         data: {
-            receiverPublicUsername: messageObject.receiver,
-            senderPublicUsername: messageObject.sender,
-            content: messageObject.content,
-            date: messageObject.date,
-            flagByte: messageObject.flagByte,
+            id: id,
+            sentByUserId: sender,
+            receivedByUserId: receiver,
+            iv: iv,
+            contentEncrypted: content,
         },
     });
     return message;
 }
 
-async function getMessages(publicUsername) {
+async function getDirectMessages(publicUsername) {
     const messages = await prisma.message.findMany({
         where: {
             receiverPublicUsername: publicUsername,
@@ -87,7 +87,7 @@ async function getMessages(publicUsername) {
     return messages;
 }
 
-async function deleteMessages(publicUsername) {
+async function deleteDirectMessage(publicUsername) {
     await prisma.message.deleteMany({
         where: {
             receiverPublicUsername: publicUsername,
@@ -114,8 +114,8 @@ export default {
     createUser,
     createToken,
     deleteToken,
-    createMessage,
-    deleteMessages,
-    getMessages,
+    createDirectMessage,
+    deleteDirectMessage,
+    getDirectMessages,
     createKeyGroup,
 };

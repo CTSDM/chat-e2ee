@@ -8,7 +8,11 @@ export default function startWebsockets(server) {
     const ws = new WebSocketServer({ server });
     ws.on("connection", (socket, req) => {
         webSocketHandlers.connection(socket, req);
+        socket.on("upgrade", () => {
+            console.log("hi");
+        });
         socket.on("message", async (data) => {
+            console.log(data);
             // the first byte of data is the flag to indicate what kind of message it is
             // 0 -> setup message, 1 -> regular direct message, 2 -> acknowledge read message
             const messageType = socketUtils.getMessageType(data);
@@ -45,6 +49,7 @@ export default function startWebsockets(server) {
                 const groupID = dataManipulation.arrBufferToString(data.slice(1, 49));
                 const sender = socket.publicUsername;
                 const flagByte = 1;
+                // the flagByte is the same as a regular message
                 socketUtils.sendGroupMessage(sockets, groupID, data.slice(49), flagByte, sender);
             }
             if (messageType === 10) {

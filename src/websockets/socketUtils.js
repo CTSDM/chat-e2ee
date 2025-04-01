@@ -16,23 +16,8 @@ async function setup(sockets, socket, data) {
         const publicUsername = messageClient.publicUsername;
         sockets[publicUsername] = socket;
         socket.publicUsername = publicUsername;
-        // we check if the user has messages pending from the DB.
-        // for now we loop through all the remaining messages
-        const messagesDB = await db.getMessages(publicUsername);
-        if (messagesDB) {
-            messagesDB.forEach((messageDB) => {
-                const message = groupMessageInformation(
-                    messageDB.flagByte,
-                    messageDB.senderPublicUsername,
-                    messageDB.content,
-                );
-                socket.send(message.buffer);
-            });
-        }
-        await db.deleteMessages(publicUsername);
     } else {
         console.log("invalid message");
-        console.log(messageObj);
     }
 }
 
@@ -86,23 +71,33 @@ async function send(sockets, senderInfoStr, socket, target, data, flagByte) {
     if (sockets[target]) {
         const message = groupMessageInformation(flagByte, senderInfoStr, new Uint8Array(data));
         sockets[target].send(message.buffer);
-    } else {
-        // user is offline
-        // we store the message in the db
-        await db.createMessage({
-            flagByte: flagByte,
-            receiver: target,
-            sender: socket.publicUsername,
-            content: new Uint8Array(data),
-        });
+    }
+    let offsetBytes = 16;
+    const messageID = dataManipulation.arrBufferToString(data.slice(offsetBytes, offsetBytes + 36));
+    offsetBytes += 36;
+    const iv = data.slice(offsetBytes, offsetBytes + 12);
+    offsetBytes += 12;
+    const content = data.slice(offsetBytes);
+    const userIdSender = (await db.getUser("publicUsername", socket.publicUsername)).id;
+    const userIdReceiver = (await db.getUser("publicUsername", target)).id;
+    try {
+        const message = await db.createDirectMessage(
+            messageID,
+            userIdSender,
+            userIdReceiver,
+            iv,
+            content,
+        );
+        console.log(message);
+    } catch (err) {
+        console.log(err);
+        throw new Error("error");
     }
 }
 
 function sendGroupMessage(sockets, groupID, data, flagByte, sender) {
     sockets[groupID].participants.forEach((username) => {
         if (sender !== username) {
-            console.log(username);
-            console.log(sender);
             const groupIDArr = dataManipulation.stringToUint8Array(groupID, 48);
             const message = groupMessageInformation(flagByte, groupIDArr, new Uint8Array(data));
             sockets[username].send(message);
