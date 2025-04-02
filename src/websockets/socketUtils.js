@@ -115,6 +115,7 @@ function groupMessageInformation(flagByte, origin, dataArray) {
 }
 
 async function close(sockets, socket) {
+    socket.close();
     console.log(`${new Date()} closing connection`);
     delete sockets[socket.publicUsername];
 }

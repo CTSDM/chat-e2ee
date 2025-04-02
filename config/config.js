@@ -6,7 +6,7 @@ const env = {
     clientUrl: process.env.CLIENT_URL,
     secretAccessToken: process.env.ACCESS_TOKEN,
     secretRefreshToken: process.env.REFRESH_TOKEN,
-    allowedOrigins: process.env.ALLOWED_ORIGINS,
+    allowedOrigin: process.env.ALLOWED_ORIGIN,
     devStatus: process.env.DEV_STATUS === "1" ? true : false,
     validation: {
         users: {
@@ -48,8 +48,7 @@ const corsConfig = {
     exposedHeaders: ["SET-COOKIES"],
     credentials: true,
     origin: (origin, cb) => {
-        const allowedOrigins = env.allowedOrigins.split(" ");
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        if (env.allowedOrigin === origin) {
             cb(null, true);
         } else {
             cb(new Error(`Request from unauthorized origin ${origin}`));
