@@ -10,20 +10,19 @@ datasource db {
 }
 
 model User {
-  id                         Int             @id @default(autoincrement())
-  privateUsername            String          @unique
-  publicUsername             String          @unique
-  publicUsernameOriginalCase String          @unique
-  password                   String
-  publicKey                  Bytes
-  privateKeyEncrypted        Bytes
-  salt                       Bytes
-  iv                         Bytes
-  SentMessages               DirectMessage[] @relation("SentMessages")
-  ReceivedMessages           DirectMessage[] @relation("ReceivedMessages")
-  Token                      Token[]
-  CreatedGroups              Group[]
-  GroupKeys                  GroupKey[]
+  id                  Int             @id @default(autoincrement())
+  privateUsername     String          @unique
+  publicUsername      String          @unique
+  password            String
+  publicKey           Bytes
+  privateKeyEncrypted Bytes
+  salt                Bytes
+  iv                  Bytes
+  SentMessages        DirectMessage[] @relation("SentMessages")
+  ReceivedMessages    DirectMessage[] @relation("ReceivedMessages")
+  Token               Token[]
+  CreatedGroups       Group[]
+  GroupKeys           GroupKey[]
 
   @@map("users")
 }
@@ -46,7 +45,7 @@ model Group {
   id              String     @id
   name            String
   createdByUserId Int
-  createdAt       DateTime
+  createdAt       DateTime   @db.Timestamptz(3)
   iv              Bytes
   User            User       @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
   GroupKeys       GroupKey[]

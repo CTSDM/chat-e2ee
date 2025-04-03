@@ -16,7 +16,6 @@ async function createUser(userData) {
         data: {
             privateUsername: userData.privateUsername,
             publicUsername: userData.publicUsername,
-            publicUsernameOriginalCase: userData.publicUsernameOriginalCase,
             password: userData.password,
             privateKeyEncrypted: userData.privateKeyEncrypted,
             publicKey: userData.publicKey,
@@ -42,19 +41,11 @@ async function getToken(tokenString) {
 }
 
 async function getPublicKey(publicUsername) {
-    const publicKey = await prisma.user.findUnique({
-        where: {
-            publicUsername: publicUsername,
-        },
-        select: {
-            publicKey: true,
-            salt: true,
-            publicUsername: true,
-            publicUsernameOriginalCase: true,
-        },
-    });
+    const queryResult = await prisma.$queryRaw`
+        SELECT users."publicKey", users.salt, users."publicUsername" FROM users
+        WHERE LOWER(users."publicUsername") = ${publicUsername};`;
 
-    return publicKey;
+    return queryResult[0];
 }
 
 async function deleteToken(tokenString) {
@@ -62,12 +53,13 @@ async function deleteToken(tokenString) {
     return token;
 }
 
-async function createDirectMessage(id, sender, receiver, iv, content) {
+async function createDirectMessage(id, sender, receiver, date, iv, content) {
     const message = await prisma.directMessage.create({
         data: {
             id: id,
             sentByUserId: sender,
             receivedByUserId: receiver,
+            createdAt: new Date(date),
             iv: iv,
             contentEncrypted: content,
         },
@@ -96,20 +88,19 @@ async function deleteDirectMessage(publicUsername) {
 }
 
 async function createKeyGroup(username, groupID, iv, key) {
-    const entryDB = await prisma.groupKeySymm.create({
-        data: {
-            publicUsername: username,
-            groupID: groupID,
-            iv: iv,
-            key: key,
-        },
-    });
-    return entryDB;
+    return null;
+}
+
+async function getUserByPublicUsername(username) {
+    const user =
+        await prisma.$queryRaw`SELECT * FROM users WHERE LOWER(users."publicUsername") = ${username};`;
+    return user[0];
 }
 
 export default {
     getUser,
     getPublicKey,
+    getUserByPublicUsername,
     getToken,
     createUser,
     createToken,

@@ -9,10 +9,7 @@ router.get("/:username/keys", jwt.auth, controller.addUserContact, (req, res) =>
         .json({
             publicKey: req.userRequested.publicKey,
             salt: req.userRequested.salt,
-            // the original case is only on the front end to display information
-            // the logic is done with the lowercase one
             publicUsername: req.userRequested.publicUsername,
-            publicUsernameOriginalCase: req.userRequested.publicUsernameOriginalCase,
         })
         .end();
 });

@@ -21,7 +21,6 @@ async function resSendClientJSON(req, res) {
     req.userDataToClient = {
         privateUsername: req.user.privateUsername,
         publicUsername: req.user.publicUsername,
-        publicUsernameOriginalCase: req.user.publicUsernameOriginalCase,
         publicKey: req.user.publicKey,
         privateKeyEncrypted: req.user.privateKeyEncrypted,
         salt: req.user.salt,

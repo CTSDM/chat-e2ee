@@ -31,7 +31,6 @@ function createAccessToken(req, res) {
 
 function signToken(req, secret, options) {
     const payload = {
-        publicUsernameOriginalCase: req.user.publicUsernameOriginalCase,
         publicUsername: req.user.publicUsername,
         privateUsername: req.user.privateUsername,
         id: req.user.id,
@@ -51,7 +50,6 @@ async function checkRefreshToken(req) {
     try {
         const payload = jwt.verify(token, env.secretRefreshToken);
         req.user = {
-            publicUsernameOriginalCase: payload.publicUsernameOriginalCase,
             publicUsername: payload.publicUsername,
             privateUsername: payload.privateUsername,
             id: payload.id,

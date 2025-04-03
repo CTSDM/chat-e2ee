@@ -38,6 +38,7 @@ function addGroupParticipants(sockets, data) {
 }
 
 function sendKey(sockets, socket, data) {
+    // this is for group messages
     const targetLength = 48;
     const receiverLength = 16;
     const flagByte = new Uint8Array(data.slice(0))[0];
@@ -48,7 +49,7 @@ function sendKey(sockets, socket, data) {
     const sender = dataManipulation.stringToUint8Array(socket.publicUsername, 16); // username at most can be 16 bytes
     const ivKey = data.slice(1 + targetLength + receiverLength);
     const infoGroupArr = new Uint8Array([...groupIDArr, ...groupName, ...sender]);
-    send(sockets, infoGroupArr, socket, receiver, ivKey, flagByte);
+    sendGroupMessage(sockets, infoGroupArr, socket, receiver, ivKey, flagByte);
 }
 
 function setupGroupMessage(sockets, data) {
@@ -63,7 +64,7 @@ function getInfoPairsFromBuffer(data, len) {
     return [str1, str2];
 }
 
-async function send(sockets, senderInfoStr, socket, target, data, flagByte) {
+async function sendDirectMessage(sockets, senderInfoStr, socket, target, data, flagByte) {
     // the information to send depends if it is a direct message or a group message
     // the sender information will take 48 bytes
     // check the user is online
@@ -75,23 +76,27 @@ async function send(sockets, senderInfoStr, socket, target, data, flagByte) {
     let offsetBytes = 16;
     const messageID = dataManipulation.arrBufferToString(data.slice(offsetBytes, offsetBytes + 36));
     offsetBytes += 36;
+    const date = dataManipulation.getDateFromBuffer(data.slice(offsetBytes, offsetBytes + 16));
+    offsetBytes += 16;
     const iv = data.slice(offsetBytes, offsetBytes + 12);
     offsetBytes += 12;
     const content = data.slice(offsetBytes);
-    const userIdSender = (await db.getUser("publicUsername", socket.publicUsername)).id;
-    const userIdReceiver = (await db.getUser("publicUsername", target)).id;
-    try {
-        const message = await db.createDirectMessage(
-            messageID,
-            userIdSender,
-            userIdReceiver,
-            iv,
-            content,
-        );
-        console.log(message);
-    } catch (err) {
-        console.log(err);
-        throw new Error("error");
+    const userIdSender = (await db.getUserByPublicUsername(socket.publicUsername)).id;
+    const userIdReceiver = (await db.getUserByPublicUsername(target)).id;
+    if (flagByte === 1) {
+        try {
+            await db.createDirectMessage(
+                messageID,
+                userIdSender,
+                userIdReceiver,
+                date,
+                new Uint8Array(iv),
+                new Uint8Array(content),
+            );
+        } catch (err) {
+            console.log(err);
+            throw new Error("error");
+        }
     }
 }
 
@@ -127,7 +132,7 @@ export default {
     saveGroupSymmKey,
     addGroupParticipants,
     close,
-    send,
+    sendDirectMessage,
     sendKey,
     sendGroupMessage,
 };

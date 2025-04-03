@@ -32,8 +32,7 @@ const add = [
         }
         // create the user
         const userData = {
-            publicUsername: req.body.publicUsername.toLowerCase(),
-            publicUsernameOriginalCase: req.body.publicUsername,
+            publicUsername: req.body.publicUsername,
             privateUsername: req.body.privateUsername,
             publicKey: dataManipulation.stringArrToBuffer(req.body.publicKey),
             privateKeyEncrypted: dataManipulation.stringArrToBuffer(req.body.privateKeyEncrypted),
@@ -87,7 +86,7 @@ const addUserContact = [
     // We make sure the user requesting the connection is not the same as the target user
     async (req, res, next) => {
         const targetPublicUsername = req.params.username.toLowerCase();
-        if (req.user.publicUsername === targetPublicUsername) {
+        if (req.user.publicUsername.toLowerCase() === targetPublicUsername) {
             return res
                 .status(400)
                 .json({ errMsg: ["Cannot request connection to yourself"] })
@@ -95,12 +94,11 @@ const addUserContact = [
         }
         try {
             const userData = await db.getPublicKey(targetPublicUsername);
-            req.userRequested = {};
             if (userData) {
+                req.userRequested = {};
                 req.userRequested.publicKey = userData.publicKey;
                 req.userRequested.salt = userData.salt;
                 req.userRequested.publicUsername = userData.publicUsername;
-                req.userRequested.publicUsernameOriginalCase = userData.publicUsernameOriginalCase;
                 next();
             } else {
                 res.sendStatus(404).end();

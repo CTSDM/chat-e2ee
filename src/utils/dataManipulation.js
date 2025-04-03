@@ -90,6 +90,11 @@ function getNumFromBuffer(buff) {
     return view.getUint8(0);
 }
 
+function getDateFromBuffer(buff) {
+    const dateStr = arrBufferToString(buff);
+    return parseInt(dateStr);
+}
+
 export default {
     stringArrToUint8,
     stringArrToBuffer,
@@ -100,5 +105,6 @@ export default {
     intToUint8Array,
     uInt8ArrayToStr,
     getNumFromBuffer,
+    getDateFromBuffer,
     arrBufferToString,
 };
