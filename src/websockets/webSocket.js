@@ -2,6 +2,7 @@ import { env } from "../../config/config.js";
 import { WebSocketServer } from "ws";
 import socketUtils from "./socketUtils.js";
 import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
+import jwt from "jsonwebtoken";
 import db from "../db/queries.js";
 
 export default function startWebsockets(server) {
@@ -31,12 +32,20 @@ export default function startWebsockets(server) {
             });
             // if connection is authenticated we upgrade the connection
             // we check the refresh token against the db
-            if (cookies["refresh-token"]) {
+            const token = cookies["refresh-token"];
+            if (token) {
                 try {
-                    const token = await db.getToken(cookies["refresh-token"]);
-                    const user = await db.getUser("id", token.userId);
-                    console.log(`Connection upgraded to ws for the user: ${user.publicUsername}`);
+                    const tokenDB = await db.getToken(cookies["refresh-token"]);
+                    if (!tokenDB) throw new Error("token not found");
+                    const payload = jwt.verify(token, env.secretRefreshToken);
+                    const user = {
+                        id: payload.id,
+                        publicUsername: payload.publicUsername,
+                        privateUsername: payload.privateUsername,
+                    };
+                    console.log(`Connection upgraded to ws for the user: ${user.privateUsername}`);
                     wss.handleUpgrade(request, socket, head, (ws) => {
+                        request.user = user;
                         wss.emit("connection", ws, request);
                     });
                     return;
@@ -47,7 +56,6 @@ export default function startWebsockets(server) {
         }
         socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
         socket.destroy();
-        console.log(message);
     }
 
     async function socketOnMessage(data, socket) {
@@ -56,11 +64,16 @@ export default function startWebsockets(server) {
         const messageType = socketUtils.getMessageType(data);
         if (messageType === 0) {
             socketUtils.setup(sockets, socket, data.slice(1));
+            // we send all the relevant messages to the user on the first login!
+            socketUtils.sendMessageHistory(sockets, socket.user.id, socket.user.publicUsername);
         }
         if (messageType === 1 || messageType === 2) {
             // sockets, senderInfoStr, socket, target, data, flagByte, groupID = null
             const target = dataManipulation.arrBufferToString(data.slice(1, 49));
-            const senderInfoStr = dataManipulation.stringToUint8Array(socket.publicUsername, 48); // must be 48 bytes being the last 16 bytes the user info
+            const senderInfoStr = dataManipulation.stringToUint8Array(
+                socket.user.publicUsername,
+                48,
+            ); // must be 48 bytes being the last 16 bytes the user info
             socketUtils.sendDirectMessage(
                 sockets,
                 senderInfoStr,
@@ -78,11 +91,11 @@ export default function startWebsockets(server) {
             socketUtils.sendKey(sockets, socket, data);
         }
         if (messageType === 5) {
-            await socketUtils.saveGroupSymmKey(socket.publicUsername, data);
+            await socketUtils.saveGroupSymmKey(socket.user.publicUsername, data);
         }
         if (messageType === 6) {
             const groupID = dataManipulation.arrBufferToString(data.slice(1, 49));
-            const sender = socket.publicUsername;
+            const sender = socket.user.publicUsername;
             const flagByte = 1;
             // the flagByte is the same as a regular message
             socketUtils.sendGroupMessage(sockets, groupID, data.slice(49), flagByte, sender);
@@ -95,11 +108,12 @@ export default function startWebsockets(server) {
         }
     }
 
-    function onConnection(socket) {
+    function onConnection(socket, request) {
         socket.binaryType = "arraybuffer";
+        socket.user = request.user;
         socket.on("message", (data) => socketOnMessage(data, socket));
         socket.on("close", () => {
-            console.log(`Closing the connection for user: ${socket.publicUsername}`);
+            console.log(`Closing the connection for user: ${socket.user.publicUsername}`);
             socketUtils.close(sockets, socket);
         });
     }

@@ -67,18 +67,6 @@ async function createDirectMessage(id, sender, receiver, date, iv, content) {
     return message;
 }
 
-async function getDirectMessages(publicUsername) {
-    const messages = await prisma.message.findMany({
-        where: {
-            receiverPublicUsername: publicUsername,
-        },
-    });
-    if (messages.length === 0) {
-        return null;
-    }
-    return messages;
-}
-
 async function deleteDirectMessage(publicUsername) {
     await prisma.message.deleteMany({
         where: {
@@ -95,6 +83,18 @@ async function getUserByPublicUsername(username) {
     const user =
         await prisma.$queryRaw`SELECT * FROM users WHERE LOWER(users."publicUsername") = ${username};`;
     return user[0];
+}
+
+async function getDirectMessages(userId) {
+    const messages = await prisma.directMessage.findMany({
+        where: {
+            OR: [{ receivedByUserId: userId }, { sentByUserId: userId }],
+        },
+        orderBy: {
+            createdAt: "asc",
+        },
+    });
+    return messages;
 }
 
 export default {

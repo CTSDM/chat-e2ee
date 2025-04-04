@@ -13,9 +13,7 @@ async function setup(sockets, socket, data) {
     const dec = new TextDecoder();
     const messageClient = JSON.parse(dec.decode(data));
     if (messageClient.type === "start") {
-        const publicUsername = messageClient.publicUsername;
-        sockets[publicUsername] = socket;
-        socket.publicUsername = publicUsername;
+        sockets[socket.user.publicUsername] = socket;
     } else {
         console.log("invalid message");
     }
@@ -46,7 +44,7 @@ function sendKey(sockets, socket, data) {
     const [receiver] = getInfoPairsFromBuffer(data.slice(1 + targetLength), receiverLength);
     const groupIDArr = dataManipulation.stringToUint8Array(groupID, 48); // must be 48 bytes being the last 16 bytes the user info
     const groupName = dataManipulation.stringToUint8Array(sockets[groupID].name, 50); // must be 48 bytes being the last 16 bytes the user info
-    const sender = dataManipulation.stringToUint8Array(socket.publicUsername, 16); // username at most can be 16 bytes
+    const sender = dataManipulation.stringToUint8Array(socket.user.publicUsername, 16); // username at most can be 16 bytes
     const ivKey = data.slice(1 + targetLength + receiverLength);
     const infoGroupArr = new Uint8Array([...groupIDArr, ...groupName, ...sender]);
     sendGroupMessage(sockets, infoGroupArr, socket, receiver, ivKey, flagByte);
@@ -81,22 +79,51 @@ async function sendDirectMessage(sockets, senderInfoStr, socket, target, data, f
     const iv = data.slice(offsetBytes, offsetBytes + 12);
     offsetBytes += 12;
     const content = data.slice(offsetBytes);
-    const userIdSender = (await db.getUserByPublicUsername(socket.publicUsername)).id;
-    const userIdReceiver = (await db.getUserByPublicUsername(target)).id;
-    if (flagByte === 1) {
-        try {
-            await db.createDirectMessage(
-                messageID,
-                userIdSender,
-                userIdReceiver,
-                date,
-                new Uint8Array(iv),
-                new Uint8Array(content),
-            );
-        } catch (err) {
-            console.log(err);
-            throw new Error("error");
+    (async () => {
+        const userIdSender = (await db.getUserByPublicUsername(socket.user.publicUsername)).id;
+        const userIdReceiver = (await db.getUserByPublicUsername(target)).id;
+        if (flagByte === 1) {
+            try {
+                await db.createDirectMessage(
+                    messageID,
+                    userIdSender,
+                    userIdReceiver,
+                    date,
+                    new Uint8Array(iv),
+                    new Uint8Array(content),
+                );
+            } catch (err) {
+                console.log(err);
+                throw new Error("error");
+            }
         }
+    })();
+}
+
+async function sendMessageHistory(sockets, userId, publicUsername) {
+    const messages = await db.getDirectMessages(userId);
+    const flagByte = 1;
+    for (let i = 0; i < messages.length; ++i) {
+        const isSenderAuthor = messages[i].sentByUserId === userId ? true : false;
+        const bobId = isSenderAuthor ? messages[i].receivedByUserId : messages[i].sentByUserId;
+        const bob = await db.getUser("id", bobId);
+        const bobUsernameLC = bob.publicUsername.toLowerCase();
+        const contextArr = dataManipulation.stringToUint8Array(bobUsernameLC, 48);
+        const bobUsernameArr = dataManipulation.stringToUint8Array(bob.publicUsername, 16);
+        const senderArr = isSenderAuthor
+            ? dataManipulation.stringToUint8Array(publicUsername, 16)
+            : bobUsernameArr;
+        const messageIdArr = dataManipulation.stringToUint8Array(messages[i].id);
+        const dateTime = new Date(messages[i].createdAt).getTime();
+        const data = dataManipulation.concatUint8Arr([
+            senderArr,
+            messageIdArr,
+            dataManipulation.stringToUint8Array(dateTime, 16),
+            messages[i].iv,
+            messages[i].contentEncrypted,
+        ]);
+        const messageToSent = groupMessageInformation(flagByte, contextArr, new Uint8Array(data));
+        sockets[publicUsername].send(messageToSent.buffer);
     }
 }
 
@@ -122,7 +149,7 @@ function groupMessageInformation(flagByte, origin, dataArray) {
 async function close(sockets, socket) {
     socket.close();
     console.log(`${new Date()} closing connection`);
-    delete sockets[socket.publicUsername];
+    delete sockets[socket.user.publicUsername];
 }
 
 export default {
@@ -135,4 +162,5 @@ export default {
     sendDirectMessage,
     sendKey,
     sendGroupMessage,
+    sendMessageHistory,
 };

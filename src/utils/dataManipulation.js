@@ -22,15 +22,6 @@ function stringArrToBuffer(stringArr) {
     }
 }
 
-function stringToBuffer(str) {
-    try {
-        const enc = new TextEncoder();
-        return enc.encode(str);
-    } catch {
-        return false;
-    }
-}
-
 function intToBuffer(int) {
     return new Uint16Array([int]).buffer;
 }
@@ -46,9 +37,12 @@ function stringToUint8Array(str, targetLength) {
     // maxLength is an integer that represents the number of bytes
     const enc = new TextEncoder();
     const arr = enc.encode(str);
-    assert.deepEqual(arr.length > targetLength, false);
-    // we pad with array of 0 a new uint8array, in case it is needed
-    return new Uint8Array([...new Array(targetLength - arr.length), ...arr]);
+    if (targetLength) {
+        assert.deepEqual(arr.length > targetLength, false);
+        // we pad with array of 0 a new uint8array, in case it is needed
+        return new Uint8Array([...new Array(targetLength - arr.length), ...arr]);
+    }
+    return arr;
 }
 
 function arrBufferToString(arrBuffer) {
@@ -61,10 +55,10 @@ function arrBufferToString(arrBuffer) {
 
 function concatUint8Arr(arrUint8Arr) {
     assert(arrUint8Arr.length > 0, "Array length must be greater than 1");
-    arrUint8Arr.forEach((arr) => {
+    arrUint8Arr.forEach((arr, index) => {
         assert(
             Object.getPrototypeOf(new Uint8Array()) === Object.getPrototypeOf(arr),
-            "The array is not fully composed of Uint8Array",
+            `The element at index ${index} is not an Uint8Array`,
         );
     });
     const arrSize = arrUint8Arr.reduce((total, arr) => total + arr.length, 0);
@@ -98,7 +92,6 @@ function getDateFromBuffer(buff) {
 export default {
     stringArrToUint8,
     stringArrToBuffer,
-    stringToBuffer,
     intToBuffer,
     stringToUint8Array,
     concatUint8Arr,
