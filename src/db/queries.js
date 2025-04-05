@@ -81,7 +81,7 @@ async function createKeyGroup(username, groupID, iv, key) {
 
 async function getUserByPublicUsername(username) {
     const user =
-        await prisma.$queryRaw`SELECT * FROM users WHERE LOWER(users."publicUsername") = ${username};`;
+        await prisma.$queryRaw`SELECT * FROM users WHERE LOWER(users."publicUsername") = ${username.toLowerCase()};`;
     return user[0];
 }
 
@@ -97,6 +97,21 @@ async function getDirectMessages(userId) {
     return messages;
 }
 
+async function updateDirectMessageReadStatus(id) {
+    const statusUpdate = await prisma.directMessage.update({
+        where: {
+            id: id,
+        },
+        data: {
+            readStatus: true,
+        },
+        select: {
+            readStatus: true,
+        },
+    });
+    return statusUpdate;
+}
+
 export default {
     getUser,
     getPublicKey,
@@ -109,4 +124,5 @@ export default {
     deleteDirectMessage,
     getDirectMessages,
     createKeyGroup,
+    updateDirectMessageReadStatus,
 };

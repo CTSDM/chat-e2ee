@@ -62,18 +62,17 @@ export default function startWebsockets(server) {
         // the first byte of data is the flag to indicate what kind of message it is
         // 0 -> setup message, 1 -> regular direct message, 2 -> acknowledge read message
         const messageType = socketUtils.getMessageType(data);
+        const publicUsername = socket.user.publicUsername;
+        const publicUsernameLC = publicUsername.toLowerCase();
         if (messageType === 0) {
             socketUtils.setup(sockets, socket, data.slice(1));
             // we send all the relevant messages to the user on the first login!
-            socketUtils.sendMessageHistory(sockets, socket.user.id, socket.user.publicUsername);
+            socketUtils.sendMessageHistory(sockets, socket.user.id, publicUsername);
         }
         if (messageType === 1 || messageType === 2) {
             // sockets, senderInfoStr, socket, target, data, flagByte, groupID = null
             const target = dataManipulation.arrBufferToString(data.slice(1, 49));
-            const senderInfoStr = dataManipulation.stringToUint8Array(
-                socket.user.publicUsername,
-                48,
-            ); // must be 48 bytes being the last 16 bytes the user info
+            const senderInfoStr = dataManipulation.stringToUint8Array(publicUsernameLC, 48); // must be 48 bytes being the last 16 bytes the user info
             socketUtils.sendDirectMessage(
                 sockets,
                 senderInfoStr,

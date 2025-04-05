@@ -13,7 +13,7 @@ async function setup(sockets, socket, data) {
     const dec = new TextDecoder();
     const messageClient = JSON.parse(dec.decode(data));
     if (messageClient.type === "start") {
-        sockets[socket.user.publicUsername] = socket;
+        sockets[socket.user.publicUsername.toLowerCase()] = socket;
     } else {
         console.log("invalid message");
     }
@@ -72,8 +72,8 @@ async function sendDirectMessage(sockets, senderInfoStr, socket, target, data, f
         sockets[target].send(message.buffer);
     }
     let offsetBytes = 16;
-    const messageID = dataManipulation.arrBufferToString(data.slice(offsetBytes, offsetBytes + 36));
-    offsetBytes += 36;
+    const messageId = dataManipulation.arrBufferToString(data.slice(offsetBytes, offsetBytes + 36));
+    offsetBytes += 36 + 1; // this extra one is due to the padding use for the read status
     const date = dataManipulation.getDateFromBuffer(data.slice(offsetBytes, offsetBytes + 16));
     offsetBytes += 16;
     const iv = data.slice(offsetBytes, offsetBytes + 12);
@@ -85,7 +85,7 @@ async function sendDirectMessage(sockets, senderInfoStr, socket, target, data, f
         if (flagByte === 1) {
             try {
                 await db.createDirectMessage(
-                    messageID,
+                    messageId,
                     userIdSender,
                     userIdReceiver,
                     date,
@@ -96,13 +96,22 @@ async function sendDirectMessage(sockets, senderInfoStr, socket, target, data, f
                 console.log(err);
                 throw new Error("error");
             }
+        } else if (flagByte === 2) {
+            // for direct we set the message read status to true
+            try {
+                const status = await db.updateDirectMessageReadStatus(messageId);
+                if (status) return true;
+            } catch (err) {
+                console.log(err);
+                console.log("something went wrong while updating the read status");
+            }
         }
     })();
 }
 
 async function sendMessageHistory(sockets, userId, publicUsername) {
     const messages = await db.getDirectMessages(userId);
-    const flagByte = 1;
+    const flagByte = 3; // Used to recover direct messages
     for (let i = 0; i < messages.length; ++i) {
         const isSenderAuthor = messages[i].sentByUserId === userId ? true : false;
         const bobId = isSenderAuthor ? messages[i].receivedByUserId : messages[i].sentByUserId;
@@ -118,12 +127,13 @@ async function sendMessageHistory(sockets, userId, publicUsername) {
         const data = dataManipulation.concatUint8Arr([
             senderArr,
             messageIdArr,
+            dataManipulation.intToUint8Array(messages[i].readStatus ? 1 : 0, 1),
             dataManipulation.stringToUint8Array(dateTime, 16),
             messages[i].iv,
             messages[i].contentEncrypted,
         ]);
         const messageToSent = groupMessageInformation(flagByte, contextArr, new Uint8Array(data));
-        sockets[publicUsername].send(messageToSent.buffer);
+        sockets[publicUsername.toLowerCase()].send(messageToSent.buffer);
     }
 }
 
