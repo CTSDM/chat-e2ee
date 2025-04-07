@@ -75,10 +75,6 @@ async function deleteDirectMessage(publicUsername) {
     });
 }
 
-async function createKeyGroup(username, groupID, iv, key) {
-    return null;
-}
-
 async function getUserByPublicUsername(username) {
     const user =
         await prisma.$queryRaw`SELECT * FROM users WHERE LOWER(users."publicUsername") = ${username.toLowerCase()};`;
@@ -112,8 +108,53 @@ async function updateDirectMessageReadStatus(id) {
     return statusUpdate;
 }
 
+async function getGroup(id) {
+    const group = await prisma.group.findUnique({
+        where: {
+            id: id,
+        },
+    });
+    return group;
+}
+
+async function createGroup(groupId, groupName, userId, date) {
+    const group = await prisma.group.create({
+        data: {
+            id: groupId,
+            name: groupName,
+            createdByUserId: userId,
+            createdAt: new Date(date),
+        },
+    });
+    return group;
+}
+
+async function createGroupMember(groupId, userId) {
+    const member = await prisma.groupMember.create({
+        data: {
+            groupId: groupId,
+            userId: userId,
+        },
+    });
+    return member;
+}
+
+async function createGroupKey(groupId, userId, key, iv, keyStatus) {
+    const entry = await prisma.groupKey.create({
+        data: {
+            groupId: groupId,
+            userId: userId,
+            key: key,
+            iv: iv,
+            finalKey: keyStatus,
+        },
+    });
+    return entry;
+}
+
 export default {
     getUser,
+    getGroup,
     getPublicKey,
     getUserByPublicUsername,
     getToken,
@@ -123,6 +164,8 @@ export default {
     createDirectMessage,
     deleteDirectMessage,
     getDirectMessages,
-    createKeyGroup,
     updateDirectMessageReadStatus,
+    createGroup,
+    createGroupMember,
+    createGroupKey,
 };

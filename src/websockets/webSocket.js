@@ -82,17 +82,17 @@ export default function startWebsockets(server) {
                 messageType,
             );
         }
-        if (messageType === 3) {
-            // with this message we add the different users to the sockets obj
-            socketUtils.addGroupParticipants(sockets, data);
-        }
         if (messageType === 4) {
-            socketUtils.sendKey(sockets, socket, data);
+            // with this message we add the different users to the sockets obj
+            socketUtils.createGroup(sockets, socket.user.id, data.slice(1));
         }
         if (messageType === 5) {
-            await socketUtils.saveGroupSymmKey(socket.user.publicUsername, data);
+            socketUtils.addGroupParticipants(sockets, data.slice(1));
         }
         if (messageType === 6) {
+            await socketUtils.saveGroupSymmKey(socket.user.publicUsername, data);
+        }
+        if (messageType === 7) {
             const groupID = dataManipulation.arrBufferToString(data.slice(1, 49));
             const sender = socket.user.publicUsername;
             const flagByte = 1;

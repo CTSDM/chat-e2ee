@@ -19,20 +19,32 @@ async function setup(sockets, socket, data) {
     }
 }
 
-async function saveGroupSymmKey(publicUsername, data) {
-    // we save the key in the database
-    const targetLength = 48;
-    const ivLength = 12;
-    const groupID = dataManipulation.arrBufferToString(data.slice(1, 1 + targetLength));
-    const iv = new Uint8Array(data.slice(1 + targetLength, 1 + targetLength + ivLength));
-    const key = new Uint8Array(data.slice(1 + targetLength + ivLength));
-    await db.createKeyGroup(publicUsername, groupID, iv, key);
+async function addGroupParticipants(sockets, data) {
+    const groupId = dataManipulation.arrBufferToString(data.slice(0, 48));
+    const username = dataManipulation.arrBufferToString(data.slice(48, 64));
+    const iv = new Uint8Array(data.slice(64, 76));
+    const key = new Uint8Array(data.slice(76, 124));
+    const isKeyFinal = dataManipulation.getNumFromBuffer(data.slice(124));
+    const userId = (await db.getUserByPublicUsername(username)).id;
+    sockets[groupId].participants.push(username);
+    try {
+        await db.createGroupMember(groupId, userId);
+        await db.createGroupKey(groupId, userId, key, iv, isKeyFinal);
+    } catch (err) {
+        console.log(err);
+    }
 }
 
-function addGroupParticipants(sockets, data) {
-    const targetLength = 48;
-    const [groupID, name] = getInfoPairsFromBuffer(data.slice(1), targetLength);
-    sockets[groupID].participants.push(name);
+async function createGroup(sockets, userId, data) {
+    const groupId = dataManipulation.arrBufferToString(data.slice(0, 48));
+    const groupName = dataManipulation.arrBufferToString(data.slice(48, 98));
+    const date = dataManipulation.getDateFromBuffer(data.slice(98, 114));
+    sockets[groupId] = { name: groupName, id: groupId, participants: [] };
+    try {
+        await db.createGroup(groupId, groupName, userId, date);
+    } catch (err) {
+        console.log(err);
+    }
 }
 
 function sendKey(sockets, socket, data) {
@@ -166,7 +178,7 @@ export default {
     getMessageType,
     setup,
     setupGroupMessage,
-    saveGroupSymmKey,
+    createGroup,
     addGroupParticipants,
     close,
     sendDirectMessage,

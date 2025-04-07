@@ -100,21 +100,21 @@ function checkUint8Arr(id, type) {
     });
 }
 
-function checkUsername(id, type, fn) {
+function checkName(id, type, fn, validationType) {
     return [
         checkAlphaNumerical(fn(id), type),
         checkLength(
             fn(id),
             type,
-            env.validation.users.username.minLength,
-            env.validation.users.username.maxLength,
+            env.validation.users[validationType].minLength,
+            env.validation.users[validationType].maxLength,
         ),
         checkWhiteSpaces(fn(id), type),
         checkRegex(
             fn(id),
             type,
-            env.validation.users.username.regex,
-            env.validation.users.username.message,
+            env.validation.users[validationType].regex,
+            env.validation.users[validationType].message,
         ),
     ];
 }
@@ -124,9 +124,9 @@ function sanitizeCase(id) {
 }
 
 const signup = [
-    checkUsername("privateUsername", "private username", body),
+    checkName("privateUsername", "private username", body, "username"),
     sanitizeCase(body("privateUsername")),
-    checkUsername("publicUsername", "public username", body),
+    checkName("publicUsername", "public username", body, "username"),
     checkPublicKey("publicKey"),
     checkPassword("password"),
     checkUint8Arr("salt", "salt"),
@@ -142,9 +142,14 @@ const login = [
 const addUserContact = [
     checkNotEmpty(param("username"), "public username"),
     sanitizeCase(param("username")),
-    checkUsername("username", "public username", param),
+    checkName("username", "public username", param, "username"),
 ];
 
-const validation = { addUserContact, signup, login, checkErrors, checkUsername };
+const groupKey = [
+    checkNotEmpty(param("groupId"), "group id"),
+    checkName("groupId", "group ID", param, "group"),
+];
+
+const validation = { addUserContact, signup, login, checkErrors, checkName, groupKey };
 export default validation;
 export { regexValidation };

@@ -16,6 +16,12 @@ const env = {
                 regex: process.env.USERNAME_REGEX,
                 message: process.env.USERNAME_REGEX_MESSAGE,
             },
+            group: {
+                minLength: 36,
+                maxLength: 36,
+                regex: process.env.GROUP_REGEX,
+                message: "The group id must be an UUID",
+            },
             password: {
                 minLength: process.env.PASSWORD_MIN_LENGTH,
                 maxLength: process.env.PASSWORD_MAX_LENGTH,
