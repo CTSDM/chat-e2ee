@@ -1,4 +1,4 @@
-import { dataManipulationUtils as dataManipulation } from "../utils/utils.js";
+import { cryptoUtils, dataManipulationUtils as dataManipulation } from "../utils/utils.js";
 import db from "../db/queries.js";
 
 function getMessageType(data) {
@@ -20,13 +20,22 @@ async function setup(sockets, socket, data) {
 }
 
 async function addGroupParticipants(sockets, data) {
-    const groupId = dataManipulation.arrBufferToString(data.slice(0, 48));
+    const groupIdBuff = data.slice(0, 48);
+    const groupId = dataManipulation.arrBufferToString(groupIdBuff);
     const username = dataManipulation.arrBufferToString(data.slice(48, 64));
     const iv = new Uint8Array(data.slice(64, 76));
     const key = new Uint8Array(data.slice(76, 124));
-    const isKeyFinal = dataManipulation.getNumFromBuffer(data.slice(124));
+    const isKeyFinal = !!dataManipulation.getNumFromBuffer(data.slice(124));
     const userId = (await db.getUserByPublicUsername(username)).id;
     sockets[groupId].participants.push(username);
+    if (isKeyFinal === false && sockets[username]) {
+        // if the member is online and the key is not final we send their key
+        // the information needed would be the groupId, iv, key and the creator username
+        const flagByte = 6;
+        const padding = cryptoUtils.getRandomValues();
+        const message = groupMessageInformation(flagByte, groupIdBuff, padding);
+        sockets[username].send(message.buffer);
+    }
     try {
         await db.createGroupMember(groupId, userId);
         await db.createGroupKey(groupId, userId, key, iv, isKeyFinal);
@@ -45,33 +54,6 @@ async function createGroup(sockets, userId, data) {
     } catch (err) {
         console.log(err);
     }
-}
-
-function sendKey(sockets, socket, data) {
-    // this is for group messages
-    const targetLength = 48;
-    const receiverLength = 16;
-    const flagByte = new Uint8Array(data.slice(0))[0];
-    const [groupID] = getInfoPairsFromBuffer(data.slice(1), targetLength);
-    const [receiver] = getInfoPairsFromBuffer(data.slice(1 + targetLength), receiverLength);
-    const groupIDArr = dataManipulation.stringToUint8Array(groupID, 48); // must be 48 bytes being the last 16 bytes the user info
-    const groupName = dataManipulation.stringToUint8Array(sockets[groupID].name, 50); // must be 48 bytes being the last 16 bytes the user info
-    const sender = dataManipulation.stringToUint8Array(socket.user.publicUsername, 16); // username at most can be 16 bytes
-    const ivKey = data.slice(1 + targetLength + receiverLength);
-    const infoGroupArr = new Uint8Array([...groupIDArr, ...groupName, ...sender]);
-    sendGroupMessage(sockets, infoGroupArr, socket, receiver, ivKey, flagByte);
-}
-
-function setupGroupMessage(sockets, data) {
-    const targetLength = 48;
-    const [groupID, name] = getInfoPairsFromBuffer(data.slice(1), targetLength);
-    sockets[groupID] = { name: name, id: groupID, participants: [] };
-}
-
-function getInfoPairsFromBuffer(data, len) {
-    const str1 = dataManipulation.arrBufferToString(data.slice(0, len));
-    const str2 = dataManipulation.arrBufferToString(data.slice(len));
-    return [str1, str2];
 }
 
 async function sendDirectMessage(sockets, senderInfoStr, socket, target, data, flagByte) {
@@ -177,12 +159,10 @@ async function close(sockets, socket) {
 export default {
     getMessageType,
     setup,
-    setupGroupMessage,
     createGroup,
     addGroupParticipants,
     close,
     sendDirectMessage,
-    sendKey,
     sendGroupMessage,
     sendMessageHistory,
 };

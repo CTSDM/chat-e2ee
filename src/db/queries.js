@@ -152,6 +152,15 @@ async function createGroupKey(groupId, userId, key, iv, keyStatus) {
     return entry;
 }
 
+async function getGroupKey(groupId, userId) {
+    const groupKey = await prisma.groupKey.findUnique({
+        where: {
+            groupId_userId: [groupId, userId],
+        },
+    });
+    return groupKey;
+}
+
 export default {
     getUser,
     getGroup,
@@ -168,4 +177,5 @@ export default {
     createGroup,
     createGroupMember,
     createGroupKey,
+    getGroupKey,
 };

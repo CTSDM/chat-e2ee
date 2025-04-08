@@ -87,6 +87,8 @@ export default function startWebsockets(server) {
             socketUtils.createGroup(sockets, socket.user.id, data.slice(1));
         }
         if (messageType === 5) {
+            // encrypted keys are saved to the database
+            // a message is also sent to the user with the group information
             socketUtils.addGroupParticipants(sockets, data.slice(1));
         }
         if (messageType === 6) {
@@ -98,12 +100,6 @@ export default function startWebsockets(server) {
             const flagByte = 1;
             // the flagByte is the same as a regular message
             socketUtils.sendGroupMessage(sockets, groupID, data.slice(49), flagByte, sender);
-        }
-        if (messageType === 10) {
-            // we register the new group
-            // save its name
-            // create empty array to add all the participants
-            socketUtils.setupGroupMessage(sockets, data);
         }
     }
 
