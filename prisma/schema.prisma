@@ -23,6 +23,7 @@ model User {
   Token               Token[]
   CreatedGroups       Group[]
   GroupKeys           GroupKey[]
+  GroupMember         GroupMember[]
 
   @@map("users")
 }
@@ -42,12 +43,13 @@ model DirectMessage {
 }
 
 model Group {
-  id              String     @id
+  id              String        @id
   name            String
   createdByUserId Int
-  createdAt       DateTime   @db.Timestamptz(3)
-  User            User       @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @db.Timestamptz(3)
+  User            User          @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
   GroupKeys       GroupKey[]
+  GroupMember     GroupMember[]
 
   @@map("groups")
 }
@@ -69,6 +71,8 @@ model GroupMember {
   groupId  String
   userId   Int
   joinetAt DateTime @default(now())
+  User     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId])
   @@map("group_members")

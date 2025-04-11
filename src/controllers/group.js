@@ -7,14 +7,23 @@ const getKey = [
     // i should do some validation of the username...
     // We make sure the user requesting the connection is not the same as the target user
     async (req, res, next) => {
-        const targetPublicUsername = req.params.groupId;
+        const groupId = req.params.groupId;
+        const userId = req.user.id;
         try {
-            const group = await db.getGroup();
-            if (userData) {
-                req.userRequested = {};
-                req.userRequested.publicKey = userData.publicKey;
-                req.userRequested.salt = userData.salt;
-                req.userRequested.publicUsername = userData.publicUsername;
+            const [group, groupKey, members] = await Promise.all([
+                db.getGroup(groupId),
+                db.getGroupKey(groupId, userId),
+                db.getGroupMembers(groupId),
+            ]);
+            const creator = await db.getUser("id", group.createdByUserId);
+            if (group && groupKey) {
+                req.group = {};
+                req.group.key = groupKey.key;
+                req.group.iv = groupKey.iv;
+                req.group.finalKey = groupKey.finalKey;
+                req.group.creator = creator.publicUsername.toLowerCase();
+                req.group.name = group.name;
+                req.group.members = members.map((entry) => entry.User.publicUsername);
                 next();
             } else {
                 res.sendStatus(404).end();

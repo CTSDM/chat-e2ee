@@ -15,42 +15,47 @@ async function setup(sockets, socket, data) {
     if (messageClient.type === "start") {
         sockets[socket.user.publicUsername.toLowerCase()] = socket;
     } else {
-        console.log("invalid message");
+        console.log("Invalid message in the initial setup.");
     }
 }
 
-async function addGroupParticipants(sockets, data) {
-    const groupIdBuff = data.slice(0, 48);
-    const groupId = dataManipulation.arrBufferToString(groupIdBuff);
-    const username = dataManipulation.arrBufferToString(data.slice(48, 64));
-    const iv = new Uint8Array(data.slice(64, 76));
-    const key = new Uint8Array(data.slice(76, 124));
-    const isKeyFinal = !!dataManipulation.getNumFromBuffer(data.slice(124));
-    const userId = (await db.getUserByPublicUsername(username)).id;
-    sockets[groupId].participants.push(username);
-    if (isKeyFinal === false && sockets[username]) {
-        // if the member is online and the key is not final we send their key
-        // the information needed would be the groupId, iv, key and the creator username
-        const flagByte = 6;
-        const padding = cryptoUtils.getRandomValues();
-        const message = groupMessageInformation(flagByte, groupIdBuff, padding);
-        sockets[username].send(message.buffer);
+async function addGroupMember(sockets, dataEntries, promiseHandler, groupId) {
+    // We need to make sure that group has been already created
+    // We add the users in batch
+    if (promiseHandler[groupId]) {
+        await promiseHandler[groupId];
     }
     try {
-        await db.createGroupMember(groupId, userId);
-        await db.createGroupKey(groupId, userId, key, iv, isKeyFinal);
+        await db.createGroupMemberAndGroupKeyBatch(dataEntries.members, dataEntries.keys);
     } catch (err) {
         console.log(err);
     }
+    // the groupId will be sent to the each user, and the browser will request the information of the group
+    // thus, we need to make sure all the groupMembers have been added before doing so
+    dataEntries.ws.forEach((entry) => {
+        if (entry.isKeyFinal === false && sockets[entry.username]) {
+            // if the member is online and the key is not final we send their key
+            // the information needed would be the groupId, iv, key and the creator username
+            const flagByte = 6;
+            const padding = cryptoUtils.getRandomValues(12);
+            const groupIdArr = dataManipulation.stringToUint8Array(groupId, 48);
+            const message = groupMessageInformation(flagByte, groupIdArr, padding);
+            sockets[entry.username].send(message.buffer);
+        }
+    });
 }
 
-async function createGroup(sockets, userId, data) {
+async function createGroup(sockets, socket, userId, data, promiseHandler) {
     const groupId = dataManipulation.arrBufferToString(data.slice(0, 48));
     const groupName = dataManipulation.arrBufferToString(data.slice(48, 98));
     const date = dataManipulation.getDateFromBuffer(data.slice(98, 114));
     sockets[groupId] = { name: groupName, id: groupId, participants: [] };
+    // ws will store the information needed that needs to be sent to the user through ws once all members keys are saved
+    socket.groups[groupId] = { members: [], keys: [], ws: [] };
     try {
-        await db.createGroup(groupId, groupName, userId, date);
+        promiseHandler[groupId] = db.createGroup(groupId, groupName, userId, date);
+        await promiseHandler[groupId];
+        promiseHandler[groupId] = null;
     } catch (err) {
         console.log(err);
     }
@@ -97,7 +102,6 @@ async function sendDirectMessage(sockets, senderInfoStr, socket, target, data, f
                 if (status) return true;
             } catch (err) {
                 console.log(err);
-                console.log("something went wrong while updating the read status");
             }
         }
     })();
@@ -160,7 +164,7 @@ export default {
     getMessageType,
     setup,
     createGroup,
-    addGroupParticipants,
+    addGroupMember,
     close,
     sendDirectMessage,
     sendGroupMessage,

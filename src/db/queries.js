@@ -139,6 +139,22 @@ async function createGroupMember(groupId, userId) {
     return member;
 }
 
+async function getGroupMembers(groupId) {
+    const members = await prisma.groupMember.findMany({
+        where: {
+            groupId: groupId,
+        },
+        select: {
+            User: {
+                select: {
+                    publicUsername: true,
+                },
+            },
+        },
+    });
+    return members;
+}
+
 async function createGroupKey(groupId, userId, key, iv, keyStatus) {
     const entry = await prisma.groupKey.create({
         data: {
@@ -155,10 +171,63 @@ async function createGroupKey(groupId, userId, key, iv, keyStatus) {
 async function getGroupKey(groupId, userId) {
     const groupKey = await prisma.groupKey.findUnique({
         where: {
-            groupId_userId: [groupId, userId],
+            groupId_userId: { groupId, userId },
         },
     });
     return groupKey;
+}
+
+async function createGroupMemberAndGroupKey(groupId, userId, key, iv, isFinalKey) {
+    const [newGroupKey, newMember] = await prisma.$transaction([
+        prisma.groupMember.create({
+            data: {
+                groupId: groupId,
+                userId: userId,
+            },
+        }),
+        prisma.groupKey.create({
+            data: {
+                groupId: groupId,
+                userId: userId,
+                key: key,
+                iv: iv,
+                finalKey: isFinalKey,
+            },
+        }),
+    ]);
+    return [newMember, newGroupKey];
+}
+
+async function createGroupMemberAndGroupKeyBatch(members, keys) {
+    const [count, _] = await prisma.$transaction([
+        prisma.groupMember.createMany({
+            data: members,
+        }),
+        prisma.groupKey.createMany({
+            data: keys,
+        }),
+    ]);
+    return count;
+}
+
+async function getUserIdsByPublicUsername(usernamesArr) {
+    const users = await prisma.user.findMany({
+        where: {
+            publicUsername: {
+                in: usernamesArr,
+                mode: "insensitive",
+            },
+        },
+        select: {
+            publicUsername: true,
+            id: true,
+        },
+    });
+    const usernameAndId = {};
+    users.forEach((entry) => {
+        usernameAndId[entry.publicUsername.toLowerCase()] = entry.id;
+    });
+    return usernameAndId;
 }
 
 export default {
@@ -166,6 +235,7 @@ export default {
     getGroup,
     getPublicKey,
     getUserByPublicUsername,
+    getUserIdsByPublicUsername,
     getToken,
     createUser,
     createToken,
@@ -178,4 +248,7 @@ export default {
     createGroupMember,
     createGroupKey,
     getGroupKey,
+    getGroupMembers,
+    createGroupMemberAndGroupKey,
+    createGroupMemberAndGroupKeyBatch,
 };

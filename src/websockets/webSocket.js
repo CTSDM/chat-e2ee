@@ -58,7 +58,7 @@ export default function startWebsockets(server) {
         socket.destroy();
     }
 
-    async function socketOnMessage(data, socket) {
+    async function socketOnMessage(data, socket, promiseHandler) {
         // the first byte of data is the flag to indicate what kind of message it is
         // 0 -> setup message, 1 -> regular direct message, 2 -> acknowledge read message
         const messageType = socketUtils.getMessageType(data);
@@ -82,17 +82,40 @@ export default function startWebsockets(server) {
                 messageType,
             );
         }
-        if (messageType === 4) {
-            // with this message we add the different users to the sockets obj
-            socketUtils.createGroup(sockets, socket.user.id, data.slice(1));
+        if (messageType === 3) {
+            // with this message we add the different users to the socket obj
+            socketUtils.createGroup(sockets, socket, socket.user.id, data.slice(1), promiseHandler);
         }
-        if (messageType === 5) {
+        if (messageType === 4) {
             // encrypted keys are saved to the database
             // a message is also sent to the user with the group information
-            socketUtils.addGroupParticipants(sockets, data.slice(1));
+            const dataUseful = data.slice(1);
+            const groupIdBuff = dataUseful.slice(0, 48);
+            const groupId = dataManipulation.arrBufferToString(groupIdBuff);
+            const username = dataManipulation.arrBufferToString(dataUseful.slice(48, 64));
+            const iv = new Uint8Array(dataUseful.slice(64, 76));
+            const key = new Uint8Array(dataUseful.slice(76, 124));
+            const isKeyFinal = !!dataManipulation.getNumFromBuffer(dataUseful.slice(124));
+            sockets[groupId].participants.push(username);
+            socket.groups[groupId].members.push({ groupId });
+            socket.groups[groupId].keys.push({ groupId, key, iv, finalKey: isKeyFinal });
+            socket.groups[groupId].ws.push({ username, isKeyFinal, groupIdBuff });
         }
-        if (messageType === 6) {
-            await socketUtils.saveGroupSymmKey(socket.user.publicUsername, data);
+        if (messageType === 5) {
+            // the group members are added as a batch to the database
+            const groupIdBuff = data.slice(1, 49);
+            const groupId = dataManipulation.arrBufferToString(groupIdBuff);
+            const usernameArr = [];
+            const groupInfo = socket.groups[groupId];
+            groupInfo.ws.forEach((entry) => usernameArr.push(entry.username));
+            const users = await db.getUserIdsByPublicUsername(usernameArr);
+            groupInfo.ws.forEach((entry, index) => {
+                groupInfo.members[index].userId = users[entry.username];
+                groupInfo.keys[index].userId = users[entry.username];
+            });
+            // once the group is created we delete the entry for groupInfo to free memory
+            await socketUtils.addGroupMember(sockets, groupInfo, promiseHandler, groupId);
+            delete socket.groups[groupId];
         }
         if (messageType === 7) {
             const groupID = dataManipulation.arrBufferToString(data.slice(1, 49));
@@ -104,9 +127,11 @@ export default function startWebsockets(server) {
     }
 
     function onConnection(socket, request) {
+        const promiseHandler = {};
         socket.binaryType = "arraybuffer";
         socket.user = request.user;
-        socket.on("message", (data) => socketOnMessage(data, socket));
+        socket.groups = {};
+        socket.on("message", (data) => socketOnMessage(data, socket, promiseHandler));
         socket.on("close", () => {
             console.log(`Closing the connection for user: ${socket.user.publicUsername}`);
             socketUtils.close(sockets, socket);

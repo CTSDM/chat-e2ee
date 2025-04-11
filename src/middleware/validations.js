@@ -102,7 +102,6 @@ function checkUint8Arr(id, type) {
 
 function checkName(id, type, fn, validationType) {
     return [
-        checkAlphaNumerical(fn(id), type),
         checkLength(
             fn(id),
             type,
@@ -124,6 +123,7 @@ function sanitizeCase(id) {
 }
 
 const signup = [
+    checkAlphaNumerical(body("privateUsername"), "private username"),
     checkName("privateUsername", "private username", body, "username"),
     sanitizeCase(body("privateUsername")),
     checkName("publicUsername", "public username", body, "username"),
@@ -134,12 +134,14 @@ const signup = [
 ];
 
 const login = [
+    checkAlphaNumerical(body("privateUsername"), "private username"),
     checkNotEmpty(body("privateUsername"), "private username"),
     sanitizeCase(body("privateUsername")),
     checkNotEmpty(body("password"), "password"),
 ];
 
 const addUserContact = [
+    checkAlphaNumerical(param("username"), "public username"),
     checkNotEmpty(param("username"), "public username"),
     sanitizeCase(param("username")),
     checkName("username", "public username", param, "username"),
