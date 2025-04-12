@@ -155,6 +155,17 @@ async function getGroupMembers(groupId) {
     return members;
 }
 
+async function getGroupIdsByUserId(userId) {
+    const result = await prisma.groupMember.findMany({
+        where: {
+            userId: userId,
+        },
+        select: {
+            groupId: true,
+        },
+    });
+    return result;
+}
 async function createGroupKey(groupId, userId, key, iv, keyStatus) {
     const entry = await prisma.groupKey.create({
         data: {
@@ -251,4 +262,5 @@ export default {
     getGroupMembers,
     createGroupMemberAndGroupKey,
     createGroupMemberAndGroupKeyBatch,
+    getGroupIdsByUserId,
 };

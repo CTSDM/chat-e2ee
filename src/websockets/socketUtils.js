@@ -19,6 +19,21 @@ async function setup(sockets, socket, data) {
     }
 }
 
+async function sendGroupOnStartup(socket) {
+    const groupIds = await db.getGroupIdsByUserId(socket.user.id);
+    groupIds.forEach((entry) => {
+        sendGroupInformation(socket, entry.groupId);
+    });
+}
+
+function sendGroupInformation(socket, groupId) {
+    const flagByte = 6;
+    const padding = cryptoUtils.getRandomValues(12);
+    const groupIdArr = dataManipulation.stringToUint8Array(groupId, 48);
+    const message = groupMessageInformation(flagByte, groupIdArr, padding);
+    socket.send(message.buffer);
+}
+
 async function addGroupMember(sockets, dataEntries, promiseHandler, groupId) {
     // We need to make sure that group has been already created
     // We add the users in batch
@@ -36,11 +51,7 @@ async function addGroupMember(sockets, dataEntries, promiseHandler, groupId) {
         if (entry.isKeyFinal === false && sockets[entry.username]) {
             // if the member is online and the key is not final we send their key
             // the information needed would be the groupId, iv, key and the creator username
-            const flagByte = 6;
-            const padding = cryptoUtils.getRandomValues(12);
-            const groupIdArr = dataManipulation.stringToUint8Array(groupId, 48);
-            const message = groupMessageInformation(flagByte, groupIdArr, padding);
-            sockets[entry.username].send(message.buffer);
+            sendGroupInformation(sockets[entry.username], groupId);
         }
     });
 }
@@ -169,4 +180,5 @@ export default {
     sendDirectMessage,
     sendGroupMessage,
     sendMessageHistory,
+    sendGroupOnStartup,
 };

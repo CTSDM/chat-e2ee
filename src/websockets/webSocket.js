@@ -66,6 +66,8 @@ export default function startWebsockets(server) {
         const publicUsernameLC = publicUsername.toLowerCase();
         if (messageType === 0) {
             socketUtils.setup(sockets, socket, data.slice(1));
+            // we send the groups to the user as if the group was recently created
+            socketUtils.sendGroupOnStartup(socket, publicUsernameLC);
             // we send all the relevant messages to the user on the first login!
             socketUtils.sendMessageHistory(sockets, socket.user.id, publicUsername);
         }
