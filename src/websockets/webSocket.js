@@ -61,49 +61,42 @@ export default function startWebsockets(server) {
     async function socketOnMessage(data, socket, promiseHandler) {
         // the first byte of data is the flag to indicate what kind of message it is
         // 0 -> setup message, 1 -> regular direct message, 2 -> acknowledge read message
-        const messageType = socketUtils.getMessageType(data);
+        const flagByte = socketUtils.getMessageType(data);
         const publicUsername = socket.user.publicUsername;
-        const publicUsernameLC = publicUsername.toLowerCase();
-        if (messageType === 0) {
-            socketUtils.setup(sockets, socket, data.slice(1));
+        const usernameLC = publicUsername.toLowerCase();
+        const userId = socket.user.id;
+        const dataUse = data.slice(1);
+        if (flagByte === 0) {
+            socketUtils.setup(sockets, socket, dataUse);
             // we send the groups to the user as if the group was recently created
-            socketUtils.sendGroupOnStartup(socket, publicUsernameLC);
+            socketUtils.sendGroupOnStartup(socket, usernameLC);
             // we send all the relevant messages to the user on the first login!
-            socketUtils.sendMessageHistory(sockets, socket.user.id, publicUsername);
+            socketUtils.sendMessageHistory(sockets, userId, publicUsername);
+            socketUtils.sendGroupMessageHistory(sockets, userId, publicUsername, promiseHandler);
         }
-        if (messageType === 1 || messageType === 2) {
+        if (flagByte === 1 || flagByte === 2) {
             // sockets, senderInfoStr, socket, target, data, flagByte, groupID = null
-            const target = dataManipulation.arrBufferToString(data.slice(1, 49));
-            const senderInfoStr = dataManipulation.stringToUint8Array(publicUsernameLC, 48); // must be 48 bytes being the last 16 bytes the user info
-            socketUtils.sendDirectMessage(
-                sockets,
-                senderInfoStr,
-                socket,
-                target,
-                data.slice(49),
-                messageType,
-            );
+            socketUtils.sendMessage(sockets, socket, dataUse, usernameLC, flagByte, promiseHandler);
         }
-        if (messageType === 3) {
+        if (flagByte === 3) {
             // with this message we add the different users to the socket obj
-            socketUtils.createGroup(sockets, socket, socket.user.id, data.slice(1), promiseHandler);
+            socketUtils.createGroup(sockets, socket, userId, dataUse, promiseHandler);
         }
-        if (messageType === 4) {
+        if (flagByte === 4) {
             // encrypted keys are saved to the database
             // a message is also sent to the user with the group information
-            const dataUseful = data.slice(1);
-            const groupIdBuff = dataUseful.slice(0, 48);
+            const groupIdBuff = dataUse.slice(0, 48);
             const groupId = dataManipulation.arrBufferToString(groupIdBuff);
-            const username = dataManipulation.arrBufferToString(dataUseful.slice(48, 64));
-            const iv = new Uint8Array(dataUseful.slice(64, 76));
-            const key = new Uint8Array(dataUseful.slice(76, 124));
-            const isKeyFinal = !!dataManipulation.getNumFromBuffer(dataUseful.slice(124));
-            sockets[groupId].participants.push(username);
+            const username = dataManipulation.arrBufferToString(dataUse.slice(48, 64));
+            const iv = new Uint8Array(dataUse.slice(64, 76));
+            const key = new Uint8Array(dataUse.slice(76, 124));
+            const isKeyFinal = !!dataManipulation.getNumFromBuffer(dataUse.slice(124));
+            sockets[groupId].members.push(username);
             socket.groups[groupId].members.push({ groupId });
             socket.groups[groupId].keys.push({ groupId, key, iv, finalKey: isKeyFinal });
             socket.groups[groupId].ws.push({ username, isKeyFinal, groupIdBuff });
         }
-        if (messageType === 5) {
+        if (flagByte === 5) {
             // the group members are added as a batch to the database
             const groupIdBuff = data.slice(1, 49);
             const groupId = dataManipulation.arrBufferToString(groupIdBuff);
@@ -118,13 +111,6 @@ export default function startWebsockets(server) {
             // once the group is created we delete the entry for groupInfo to free memory
             await socketUtils.addGroupMember(sockets, groupInfo, promiseHandler, groupId);
             delete socket.groups[groupId];
-        }
-        if (messageType === 7) {
-            const groupID = dataManipulation.arrBufferToString(data.slice(1, 49));
-            const sender = socket.user.publicUsername;
-            const flagByte = 1;
-            // the flagByte is the same as a regular message
-            socketUtils.sendGroupMessage(sockets, groupID, data.slice(49), flagByte, sender);
         }
     }
 

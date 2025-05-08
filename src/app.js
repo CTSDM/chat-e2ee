@@ -22,8 +22,8 @@ app.use(express.json());
 
 app.use("/login", loginRoute);
 app.use("/signup", signupRoute);
-app.use("/users", userRoute);
-app.use("/groups", groupRoute);
+app.use("/user", userRoute);
+app.use("/group", groupRoute);
 app.use("/logout", logoutRoute);
 
 const server = app.listen(env.port, () => console.log(`Listening on port ${env.port}`));

@@ -53,6 +53,34 @@ async function deleteToken(tokenString) {
     return token;
 }
 
+async function createGroupMessage(id, senderId, groupId, date, iv, content) {
+    // this function is exactly the same as createDirectMessage
+    // however, the schemas are different, this one has groupId as receiver while direct messages table
+    // has a userId. Different foreign keys.
+    const message = await prisma.groupMessage.create({
+        data: {
+            id: id,
+            groupId: groupId,
+            senderId: senderId,
+            createdAt: new Date(date),
+            iv: iv,
+            contentEncrypted: content,
+        },
+    });
+    return message;
+}
+
+async function updateGroupMessageReadStatus(messageId, userId, date) {
+    const statusUpdate = await prisma.groupMessageReadStatus.create({
+        data: {
+            messageId: messageId,
+            userId: userId,
+            readAt: new Date(date),
+        },
+    });
+    return statusUpdate;
+}
+
 async function createDirectMessage(id, sender, receiver, date, iv, content) {
     const message = await prisma.directMessage.create({
         data: {
@@ -140,7 +168,7 @@ async function createGroupMember(groupId, userId) {
 }
 
 async function getGroupMembers(groupId) {
-    const members = await prisma.groupMember.findMany({
+    const membersObjArr = await prisma.groupMember.findMany({
         where: {
             groupId: groupId,
         },
@@ -152,7 +180,8 @@ async function getGroupMembers(groupId) {
             },
         },
     });
-    return members;
+    const membersArr = membersObjArr.map((entry) => entry.User.publicUsername);
+    return membersArr;
 }
 
 async function getGroupIdsByUserId(userId) {
@@ -164,7 +193,9 @@ async function getGroupIdsByUserId(userId) {
             groupId: true,
         },
     });
-    return result;
+    const groupsIdArray = [];
+    result.forEach((entry) => groupsIdArray.push(entry.groupId));
+    return groupsIdArray;
 }
 async function createGroupKey(groupId, userId, key, iv, keyStatus) {
     const entry = await prisma.groupKey.create({
@@ -186,6 +217,36 @@ async function getGroupKey(groupId, userId) {
         },
     });
     return groupKey;
+}
+
+async function getGroupMessages(userId) {
+    // we return the relevant information
+    // that includes the publicusername of the user that sent the message
+    const groupMembersInfo = await prisma.groupMember.findMany({
+        where: {
+            userId: userId,
+        },
+        include: {
+            Group: {
+                include: {
+                    GroupMessage: {
+                        select: {
+                            id: true,
+                            contentEncrypted: true,
+                            createdAt: true,
+                            iv: true,
+                            groupId: true,
+                            User: true,
+                            GroupMessageReadStatus: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+    const messages = [];
+    groupMembersInfo.map((entry) => messages.push(...entry.Group.GroupMessage));
+    return messages;
 }
 
 async function createGroupMemberAndGroupKey(groupId, userId, key, iv, isFinalKey) {
@@ -263,4 +324,7 @@ export default {
     createGroupMemberAndGroupKey,
     createGroupMemberAndGroupKeyBatch,
     getGroupIdsByUserId,
+    createGroupMessage,
+    getGroupMessages,
+    updateGroupMessageReadStatus,
 };

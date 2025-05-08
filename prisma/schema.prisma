@@ -10,20 +10,22 @@ datasource db {
 }
 
 model User {
-  id                  Int             @id @default(autoincrement())
-  privateUsername     String          @unique
-  publicUsername      String          @unique
-  password            String
-  publicKey           Bytes
-  privateKeyEncrypted Bytes
-  salt                Bytes
-  iv                  Bytes
-  SentMessages        DirectMessage[] @relation("SentMessages")
-  ReceivedMessages    DirectMessage[] @relation("ReceivedMessages")
-  Token               Token[]
-  CreatedGroups       Group[]
-  GroupKeys           GroupKey[]
-  GroupMember         GroupMember[]
+  id                     Int                      @id @default(autoincrement())
+  privateUsername        String                   @unique
+  publicUsername         String                   @unique
+  password               String
+  publicKey              Bytes
+  privateKeyEncrypted    Bytes
+  salt                   Bytes
+  iv                     Bytes
+  SentMessages           DirectMessage[]          @relation("SentMessages")
+  ReceivedMessages       DirectMessage[]          @relation("ReceivedMessages")
+  Token                  Token[]
+  CreatedGroups          Group[]
+  GroupKeys              GroupKey[]
+  GroupMember            GroupMember[]
+  GroupMessage           GroupMessage[]
+  GroupMessageReadStatus GroupMessageReadStatus[]
 
   @@map("users")
 }
@@ -43,13 +45,14 @@ model DirectMessage {
 }
 
 model Group {
-  id              String        @id
+  id              String         @id
   name            String
   createdByUserId Int
-  createdAt       DateTime      @db.Timestamptz(3)
-  User            User          @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @db.Timestamptz(3)
+  User            User           @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
   GroupKeys       GroupKey[]
   GroupMember     GroupMember[]
+  GroupMessage    GroupMessage[]
 
   @@map("groups")
 }
@@ -79,19 +82,25 @@ model GroupMember {
 }
 
 model GroupMessage {
-  id       String   @id
-  groupID  String
-  senderID Int
-  content  String
-  sentAt   DateTime @default(now())
+  id                     String                   @id
+  groupId                String
+  senderId               Int
+  iv                     Bytes
+  contentEncrypted       Bytes
+  createdAt              DateTime                 @default(now())
+  User                   User                     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  Group                  Group                    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  GroupMessageReadStatus GroupMessageReadStatus[]
 
   @@map("group_messages")
 }
 
 model GroupMessageReadStatus {
-  messageId String
-  userId    Int
-  readAt    DateTime @default(now())
+  messageId    String
+  userId       Int
+  readAt       DateTime     @default(now())
+  User         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  GroupMessage GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@unique([messageId, userId])
   @@map("group_message_read_status")

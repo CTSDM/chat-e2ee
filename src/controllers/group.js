@@ -23,7 +23,7 @@ const getKey = [
                 req.group.finalKey = groupKey.finalKey;
                 req.group.creator = creator.publicUsername.toLowerCase();
                 req.group.name = group.name;
-                req.group.members = members.map((entry) => entry.User.publicUsername);
+                req.group.members = members;
                 next();
             } else {
                 res.sendStatus(404).end();
