@@ -70,6 +70,15 @@ async function createGroupMessage(id, senderId, groupId, date, iv, content) {
     return message;
 }
 
+async function getGroupMessageReadStatus(messageId, userId) {
+    const status = await prisma.groupMessageReadStatus.findUnique({
+        where: {
+            messageId_userId: { messageId, userId },
+        },
+    });
+    return status;
+}
+
 async function updateGroupMessageReadStatus(messageId, userId, date) {
     const statusUpdate = await prisma.groupMessageReadStatus.create({
         data: {
@@ -327,4 +336,5 @@ export default {
     createGroupMessage,
     getGroupMessages,
     updateGroupMessageReadStatus,
+    getGroupMessageReadStatus,
 };

@@ -106,7 +106,9 @@ async function saveGroupMessage(groupId, data, senderId, flagByte) {
         }
     } else if (flagByte === 2) {
         try {
-            await db.updateGroupMessageReadStatus(messageId, senderId, date);
+            // we first check if the state has already been saved
+            const status = await db.getGroupMessageReadStatus(messageId, senderId);
+            if (!status) await db.updateGroupMessageReadStatus(messageId, senderId, date);
         } catch (err) {
             console.log(err);
         }
@@ -222,7 +224,7 @@ async function sendGroupMessageHistory(sockets, userId, publicUsername, promiseH
             const readerArr = dataManipulation.stringToUint8Array(reader, 16);
             const data = dataManipulation.concatUint8Arr([readerArr, messageIdArr]);
             const messageToSent = groupMessageInformation(2, contextArr, data);
-            sockets[publicUsername.toLowerCase()].send(messageToSent);
+            sockets[publicUsername.toLowerCase()].send(messageToSent.buffer);
         });
     }
 }
