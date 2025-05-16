@@ -15,15 +15,15 @@ async function createTokens(req, res, next) {
 }
 
 async function createRefreshToken(req, res) {
-    const expiration = 60 * 60 * 24; // 24 hours
+    const expiration = 60 * 60 * 24; // result in seconds 24 hours
     const token = signToken(req, env.secretRefreshToken, { expiresIn: expiration });
-    await db.createToken(token, req.user.id);
+    await db.createRefreshToken(token, req.user.id);
     res.cookie("refresh-token", token, { ...env.cookie.options, maxAge: env.cookie.maxAge });
     return;
 }
 
 function createAccessToken(req, res) {
-    const expiration = 60 * 3; // 3 minutes
+    const expiration = 60 * 3; // result in seconds
     const token = signToken(req, env.secretAccessToken, { expiresIn: expiration });
     res.cookie("access-token", token, { ...env.cookie.options, maxAge: env.cookie.maxAge });
     return;
@@ -43,11 +43,12 @@ async function checkRefreshToken(req) {
     if (!token) {
         return false;
     }
-    const tokenDB = token ? await db.getToken(token) : null;
+    const tokenDB = token ? await db.getRefreshToken(token) : null;
     if (tokenDB === null) {
         return false;
     }
     try {
+        // if the token is expired an error will be raised
         const payload = jwt.verify(token, env.secretRefreshToken);
         req.user = {
             publicUsername: payload.publicUsername,
@@ -57,7 +58,8 @@ async function checkRefreshToken(req) {
         return true;
     } catch (err) {
         try {
-            await db.deleteToken(token);
+            // delete the refresh token from the DB
+            await db.deleteRefreshToken(token);
         } catch (err) {
             if (err.meta && err.meta.cause !== env.dbMessages.delete.notFound) {
                 console.log(err);

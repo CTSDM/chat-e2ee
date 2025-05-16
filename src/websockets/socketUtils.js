@@ -76,6 +76,7 @@ async function createGroup(sockets, socket, userId, data, promiseHandler) {
         promiseHandler[groupId] = db.createGroup(groupId, groupName, userId, date);
         await promiseHandler[groupId];
         promiseHandler[groupId] = null;
+        delete promiseHandler[groupId];
     } catch (err) {
         console.log(err);
     }
@@ -191,6 +192,7 @@ async function initGroups(sockets, userId, promiseHandlers) {
             }
             await promiseHandlers[id];
             promiseHandlers[id] = null;
+            delete promiseHandlers[id];
         }
     }
 }
@@ -265,6 +267,7 @@ async function sendGroupMessage(sockets, groupId, data, flagByte, sender, promis
         }
         await promiseHandlers[groupId];
         promiseHandlers[groupId] = null;
+        delete promiseHandlers[groupId];
     }
 
     sockets[groupId].members.forEach((username) => {
@@ -292,7 +295,7 @@ function groupMessageInformation(flagByte, origin, dataArray) {
 async function close(sockets, socket) {
     socket.close();
     console.log(`${new Date()} closing connection`);
-    delete sockets[socket.user.publicUsername];
+    if (sockets[socket.user.publicUsername]) delete sockets[socket.user.publicUsername];
 }
 
 export default {
