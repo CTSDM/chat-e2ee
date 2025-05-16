@@ -6,8 +6,6 @@ function validate(validated, userId) {
     // we check that the validated object exists matches the current userId and check the expiration
     if (!validated[userId]) return false;
     if (validated[userId].id !== userId || validated[userId].expiration < new Date()) {
-        validated[userId] = null;
-        delete validated[userId];
         return false;
     }
     return true;

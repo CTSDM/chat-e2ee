@@ -47,7 +47,7 @@ export default function startWebsockets(server) {
         // for every message we check if the connection is still valid
         const userId = socket.user.id;
         if (!wsConnection.validate(validated, userId)) {
-            socketUtils.close(sockets, socket);
+            socketUtils.close(sockets, socket, validated);
             return;
         }
 
@@ -109,7 +109,7 @@ export default function startWebsockets(server) {
         socket.on("message", (data) => socketOnMessage(data, socket));
         socket.on("close", () => {
             console.log(`Closing the connection for user: ${socket.user.publicUsername}`);
-            socketUtils.close(sockets, socket);
+            socketUtils.close(sockets, socket, validated);
         });
     }
 }

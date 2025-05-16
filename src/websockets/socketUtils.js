@@ -292,9 +292,14 @@ function groupMessageInformation(flagByte, origin, dataArray) {
     return message;
 }
 
-async function close(sockets, socket) {
+async function close(sockets, socket, validated) {
     socket.close();
+    const userId = socket.user.id;
     console.log(`${new Date()} closing connection`);
+    if (validated[userId]) {
+        validated[userId] = null;
+        delete validated[userId];
+    }
     if (sockets[socket.user.publicUsername]) delete sockets[socket.user.publicUsername];
 }
 
