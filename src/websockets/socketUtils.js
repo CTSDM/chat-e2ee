@@ -1,4 +1,4 @@
-import { cryptoUtils, dataManipulationUtils as dataManipulation } from "../utils/utils.js";
+import { checks, cryptoUtils, dataManipulationUtils as dataManipulation } from "../utils/utils.js";
 import db from "../db/queries.js";
 
 function getMessageType(data) {
@@ -82,6 +82,24 @@ async function createGroup(sockets, socket, userId, data, promiseHandler) {
     }
 }
 
+function createGroupMessage(messageId, senderId, groupId, iv, content, date) {
+    // check the data group message before creating the message
+    checks.uuid(messageId);
+    checks.number(senderId);
+    checks.uuid(groupId);
+    checks.arrayBuffer(iv, 12);
+    checks.arrayBuffer(content);
+    checks.date(date, { lower: Date.now() - 60, upper: Date.now() });
+    return {
+        id: messageId,
+        senderId: senderId,
+        groupId: groupId,
+        iv: new Uint8Array(iv),
+        content: new Uint8Array(content),
+        date: new Date(date),
+    };
+}
+
 async function saveGroupMessage(groupId, data, senderId, flagByte) {
     let offsetBytes = 16;
     const messageId = dataManipulation.arrBufferToString(data.slice(offsetBytes, offsetBytes + 36));
@@ -92,20 +110,17 @@ async function saveGroupMessage(groupId, data, senderId, flagByte) {
         const iv = data.slice(offsetBytes, offsetBytes + 12);
         offsetBytes += 12;
         const content = data.slice(offsetBytes);
+        const message = createGroupMessage(messageId, senderId, groupId, iv, content, date);
         try {
-            await db.createGroupMessage(
-                messageId,
-                senderId,
-                groupId,
-                date,
-                new Uint8Array(iv),
-                new Uint8Array(content),
-            );
+            await db.createGroupMessage(message);
         } catch (err) {
             console.log(err);
             throw new Error("error");
         }
     } else if (flagByte === 2) {
+        checks.uuid(messageId);
+        checks.number(senderId);
+        checks.date(date);
         try {
             // we first check if the state has already been saved
             const status = await db.getGroupMessageReadStatus(messageId, senderId);

@@ -53,21 +53,21 @@ async function deleteRefreshToken(tokenString) {
     return token;
 }
 
-async function createGroupMessage(id, senderId, groupId, date, iv, content) {
+async function createGroupMessage(message, date) {
     // this function is exactly the same as createDirectMessage
     // however, the schemas are different, this one has groupId as receiver while direct messages table
     // has a userId. Different foreign keys.
-    const message = await prisma.groupMessage.create({
+    const messageSaved = await prisma.groupMessage.create({
         data: {
-            id: id,
-            groupId: groupId,
-            senderId: senderId,
-            createdAt: new Date(date),
-            iv: iv,
-            contentEncrypted: content,
+            id: message.id,
+            groupId: message.groupId,
+            senderId: message.senderId,
+            createdAt: date,
+            iv: message.iv,
+            contentEncrypted: message.content,
         },
     });
-    return message;
+    return messageSaved;
 }
 
 async function getGroupMessageReadStatus(messageId, userId) {
