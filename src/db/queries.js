@@ -248,6 +248,9 @@ async function getGroupMessages(userId) {
                             User: true,
                             GroupMessageReadStatus: true,
                         },
+                        orderBy: {
+                            createdAt: "asc",
+                        },
                     },
                 },
             },
