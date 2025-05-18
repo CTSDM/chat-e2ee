@@ -77,6 +77,42 @@ describe("The function that checks the type ArrayBuffer", () => {
     });
 });
 
+describe("The function that checks strings", () => {
+    it("should work for non empty strings", () => {
+        expect(checks.string("test")).toBeTruthy();
+    });
+
+    it("should not work for an empty strings", () => {
+        expect(() => {
+            checks.string("");
+        }).toThrowError();
+    });
+
+    it("should work for only lower limits", () => {
+        expect(checks.string("test", { lower: 3 })).toBeTruthy();
+    });
+
+    it("should work for only upper limits", () => {
+        expect(checks.string("test", { upper: 10 })).toBeTruthy();
+    });
+
+    it("should not work for when string length is smaller than lower limit", () => {
+        expect(() => {
+            checks.string("test", { lower: 10 });
+        }).toThrowError();
+    });
+
+    it("should not work for when string length is larger than upper limit", () => {
+        expect(() => {
+            checks.string("test", { upper: 3 });
+        }).toThrowError();
+    });
+
+    it("should work for with correct limits", () => {
+        expect(checks.string("test", { upper: 10, lower: 3 })).toBeTruthy();
+    });
+});
+
 describe("The function that checks date", () => {
     it("should work for a valid date", () => {
         expect(checks.date(Date.now())).toBeTruthy();

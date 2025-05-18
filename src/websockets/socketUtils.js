@@ -1,5 +1,6 @@
 import { checks, cryptoUtils, dataManipulationUtils as dataManipulation } from "../utils/utils.js";
 import db from "../db/queries.js";
+import { env } from "../../config/config.js";
 
 function getMessageType(data) {
     // the first byte of the message will show whether the data is for setup or a message
@@ -89,14 +90,19 @@ function createGroupMessage(messageId, senderId, groupId, iv, content, date) {
     checks.uuid(groupId);
     checks.arrayBuffer(iv, 12);
     checks.arrayBuffer(content);
-    checks.date(date, { lower: Date.now() - 60, upper: Date.now() });
+    try {
+        const timeStampNow = Date.now();
+        checks.date(date, { lower: timeStampNow - 2 * 1000, upper: timeStampNow + 2 * 1000 });
+    } catch {
+        console.log("The user timestamp for message is quite dubious...");
+    }
     return {
         id: messageId,
         senderId: senderId,
         groupId: groupId,
         iv: new Uint8Array(iv),
         content: new Uint8Array(content),
-        date: new Date(date),
+        date: new Date(),
     };
 }
 
@@ -124,10 +130,80 @@ async function saveGroupMessage(groupId, data, senderId, flagByte) {
         try {
             // we first check if the state has already been saved
             const status = await db.getGroupMessageReadStatus(messageId, senderId);
-            if (!status) await db.updateGroupMessageReadStatus(messageId, senderId, date);
+            if (!status) await db.createGroupMessageReadStatus(messageId, senderId, date);
         } catch (err) {
             console.log(err);
         }
+    }
+}
+
+function createDirectMessage(messageId, senderId, receiver, iv, content, date) {
+    // check the data group message before creating the message
+    checks.uuid(messageId);
+    checks.number(senderId);
+    checks.string(receiver, {
+        upper: +env.validation.users.username.maxLength,
+        lower: +env.validation.users.username.minLength,
+    });
+    checks.arrayBuffer(iv, 12);
+    checks.arrayBuffer(content);
+    try {
+        const timeStampNow = Date.now();
+        checks.date(date, { lower: timeStampNow - 2 * 1000, upper: timeStampNow + 2 * 1000 });
+    } catch {
+        console.log("The user timestamp for message is quite dubious...");
+    }
+    return {
+        id: messageId,
+        senderId: senderId,
+        iv: new Uint8Array(iv),
+        content: new Uint8Array(content),
+        date: new Date(),
+    };
+}
+
+async function saveDirectMessage(receiver, data, senderId, flagByte, promiseHandlers) {
+    let offsetBytes = 16 + 48;
+    const messageId = dataManipulation.arrBufferToString(data.slice(offsetBytes, offsetBytes + 36));
+    if (flagByte === 1) {
+        offsetBytes += 36 + 1; // this extra one is due to the padding use for the read status
+        const date = dataManipulation.getDateFromBuffer(data.slice(offsetBytes, offsetBytes + 16));
+        offsetBytes += 16;
+        const iv = data.slice(offsetBytes, offsetBytes + 12);
+        offsetBytes += 12;
+        const content = data.slice(offsetBytes);
+        // we save/update on different db tables
+        const message = createDirectMessage(messageId, senderId, receiver, iv, content, date);
+        message.receiverId = (await db.getUserByPublicUsername(receiver)).id;
+        if (!message.receiverId) throw new Error("The receiver could not be found in the database");
+        try {
+            promiseHandlers[messageId] = db.createDirectMessage(message);
+            await promiseHandlers[messageId];
+            delete promiseHandlers[messageId];
+        } catch (err) {
+            console.log(err);
+            throw new Error("error");
+        }
+    } else if (flagByte === 2) {
+        checks.uuid(messageId);
+        try {
+            if (promiseHandlers[messageId]) await promiseHandlers[messageId];
+            const status = await db.updateDirectMessageReadStatus(messageId);
+            if (status) return true;
+            else throw new Error(`Read status of message ${messageId} not properly updated`);
+        } catch (err) {
+            console.log(err);
+        }
+    }
+}
+
+function sendDirectMessage(receiverPublicUsername, senderPublicUsername, flagByte, data, sockets) {
+    // the direct message is sent after the message is checked
+    if (sockets[receiverPublicUsername]) {
+        // if the user is online we send the message
+        const senderArr = dataManipulation.stringToUint8Array(senderPublicUsername, 48);
+        const message = groupMessageInformation(flagByte, senderArr, data);
+        sockets[receiverPublicUsername].send(message.buffer);
     }
 }
 
@@ -139,61 +215,14 @@ async function sendMessage(sockets, socket, data, username, flagByte, promiseHan
     const target = dataManipulation.arrBufferToString(data.slice(0, 48));
     const messageType = target.length === 36 ? "group" : "direct";
     const dataToSend = new Uint8Array(data.slice(48));
-    let message;
     if (messageType === "group") {
         // we have to pull up all the members that belong to the group that are not the current user
         // the saveGroupMessage function can be done async
         saveGroupMessage(target, data.slice(48), socket.user.id, flagByte);
         sendGroupMessage(sockets, target, data.slice(48), flagByte, username, promiseHandlers);
     } else {
-        // direct message
-        if (sockets[target]) {
-            // if the user is online we send the message
-            const senderArr = dataManipulation.stringToUint8Array(username, 48);
-            message = groupMessageInformation(flagByte, senderArr, dataToSend);
-            sockets[target].send(message.buffer);
-        }
-        let offsetBytes = 16 + 48;
-        const messageId = dataManipulation.arrBufferToString(
-            data.slice(offsetBytes, offsetBytes + 36),
-        );
-        if (flagByte === 1) {
-            offsetBytes += 36 + 1; // this extra one is due to the padding use for the read status
-            const date = dataManipulation.getDateFromBuffer(
-                data.slice(offsetBytes, offsetBytes + 16),
-            );
-            offsetBytes += 16;
-            const iv = data.slice(offsetBytes, offsetBytes + 12);
-            offsetBytes += 12;
-            const content = data.slice(offsetBytes);
-            // we save/update on different db tables
-            const userIdReceiver = (await db.getUserByPublicUsername(target)).id;
-            try {
-                promiseHandlers[messageId] = db.createDirectMessage(
-                    messageId,
-                    socket.user.id,
-                    userIdReceiver,
-                    date,
-                    new Uint8Array(iv),
-                    new Uint8Array(content),
-                );
-                await promiseHandlers[messageId];
-                delete promiseHandlers[messageId];
-            } catch (err) {
-                console.log(err);
-                throw new Error("error");
-            }
-        } else if (flagByte === 2) {
-            // for direct we set the message read status to true
-            try {
-                if (promiseHandlers[messageId]) await promiseHandlers[messageId];
-                const status = await db.updateDirectMessageReadStatus(messageId);
-                if (status) return true;
-                else throw new Error(`Read status of message ${messageId} not properly updated`);
-            } catch (err) {
-                console.log(err);
-            }
-        }
+        saveDirectMessage(target, data, socket.user.id, flagByte, promiseHandlers);
+        sendDirectMessage(target, username, flagByte, dataToSend, sockets);
     }
 }
 
@@ -276,6 +305,7 @@ async function sendMessageHistory(sockets, userId, publicUsername) {
 
 async function sendGroupMessage(sockets, groupId, data, flagByte, sender, promiseHandlers) {
     // Before sending the message we check and if needed create the entry for sockets[groupId]
+    // the data has already been checked and validated by the function saveGroupMessage
     if (!sockets[groupId]) {
         if (!promiseHandlers[groupId]) {
             promiseHandlers[groupId] = initGroup(sockets, groupId);

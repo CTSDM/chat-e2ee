@@ -79,7 +79,7 @@ async function getGroupMessageReadStatus(messageId, userId) {
     return status;
 }
 
-async function updateGroupMessageReadStatus(messageId, userId, date) {
+async function createGroupMessageReadStatus(messageId, userId, date) {
     const statusUpdate = await prisma.groupMessageReadStatus.create({
         data: {
             messageId: messageId,
@@ -90,18 +90,18 @@ async function updateGroupMessageReadStatus(messageId, userId, date) {
     return statusUpdate;
 }
 
-async function createDirectMessage(id, sender, receiver, date, iv, content) {
-    const message = await prisma.directMessage.create({
+async function createDirectMessage(message) {
+    const messageCreated = await prisma.directMessage.create({
         data: {
-            id: id,
-            sentByUserId: sender,
-            receivedByUserId: receiver,
-            createdAt: new Date(date),
-            iv: iv,
-            contentEncrypted: content,
+            id: message.id,
+            sentByUserId: message.senderId,
+            receivedByUserId: message.receiverId,
+            createdAt: message.date,
+            iv: message.iv,
+            contentEncrypted: message.content,
         },
     });
-    return message;
+    return messageCreated;
 }
 
 async function deleteDirectMessage(publicUsername) {
@@ -335,6 +335,6 @@ export default {
     getGroupIdsByUserId,
     createGroupMessage,
     getGroupMessages,
-    updateGroupMessageReadStatus,
+    createGroupMessageReadStatus,
     getGroupMessageReadStatus,
 };

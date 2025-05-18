@@ -23,6 +23,23 @@ function arrayBuffer(itemToCheck, len) {
     return true;
 }
 
+function string(name, limits) {
+    assert.strictEqual(typeof name, "string");
+    assert.strictEqual(name.length > 0, true);
+    if (limits) {
+        assert(limits.lower || limits.upper, true);
+        if (limits.upper) {
+            number(limits.upper);
+            assert.strictEqual(name.length <= limits.upper, true);
+        }
+        if (limits.lower) {
+            number(limits.lower);
+            assert.strictEqual(name.length >= limits.lower, true);
+        }
+    }
+    return true;
+}
+
 function date(dateInt, limits) {
     number(dateInt);
     assert.strictEqual(!isNaN(new Date(dateInt).getTime()), true);
@@ -65,4 +82,4 @@ function checkUUIDstructure(id) {
     return true;
 }
 
-export default { arrayBuffer, date, number, uuid };
+export default { arrayBuffer, date, number, string, uuid };
