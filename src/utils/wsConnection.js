@@ -13,6 +13,7 @@ function validate(validated, userId) {
 
 async function createValidation(cookieHeader, promiseHandler, memoryValidation) {
     // We verify the refresh token and we check it against the database
+    if (!cookieHeader) return null;
     const refreshToken = getRefreshToken(cookieHeader);
     let id;
     try {
